@@ -3,25 +3,58 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-page: #F5F5F5;
+  --bg-surface: #FFFFFF;
+  --border: #E5E5E5;
+  --border-light: #EFEFEF;
+  --text-primary: #0A0A0A;
+  --text-secondary: #6B6B6B;
+  --text-tertiary: #A0A0A0;
+  --accent: #FF6B35;
+  --accent-light: #FFF0EB;
+  --accent-text: #C94A1A;
+  --positive: #16A34A;
+  --positive-light: #F0FDF4;
+  --negative: #DC2626;
+  --negative-light: #FEF2F2;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-geist), Inter, system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@keyframes skeleton-pulse {
+  0%, 100% { background-color: #F0F0F0; }
+  50% { background-color: #E8E8E8; }
 }
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E5E5E5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #D0D0D0; }
