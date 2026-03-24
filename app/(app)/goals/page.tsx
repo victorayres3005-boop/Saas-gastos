@@ -100,6 +100,25 @@ export default function GoalsPage() {
     else { showToast('Meta removida'); refetch() }
   }
 
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefreshRates = async () => {
+    setRefreshing(true)
+    try {
+      const res = await fetch('/api/refresh-rates', { method: 'POST' })
+      const json = await res.json()
+      if (json.error) showToast(json.error, 'error')
+      else showToast('Taxas atualizadas!')
+      // recarrega rates relendo o hook — força re-mount via key trick não necessário,
+      // basta um pequeno reload do hook
+      window.location.reload()
+    } catch {
+      showToast('Erro ao conectar com o Banco Central', 'error')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const cdiAnnual = toAnnualPct(rates.cdi)
   const selicAnnual = toAnnualPct(rates.selic)
   const hasRates = rates.cdi > 0
@@ -122,12 +141,22 @@ export default function GoalsPage() {
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
             Taxas de mercado
           </p>
-          {rates.date && (
-            <p className="text-[11px] text-text-tertiary flex items-center gap-1">
-              <RefreshCw size={10} />
-              Ref. {new Date(rates.date + 'T12:00:00').toLocaleDateString('pt-BR')}
-            </p>
-          )}
+          <div className="flex items-center gap-3">
+            {rates.date && (
+              <p className="text-[11px] text-text-tertiary flex items-center gap-1">
+                <RefreshCw size={10} />
+                Ref. {new Date(rates.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </p>
+            )}
+            <button
+              onClick={handleRefreshRates}
+              disabled={refreshing}
+              className="flex items-center gap-1 text-[11px] font-medium text-accent hover:opacity-80 transition-opacity disabled:opacity-40"
+            >
+              <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Atualizando...' : 'Atualizar'}
+            </button>
+          </div>
         </div>
         {rates.loading ? (
           <p className="text-xs text-text-tertiary">Carregando taxas...</p>
