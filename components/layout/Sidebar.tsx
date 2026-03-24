@@ -83,7 +83,7 @@ export function Sidebar() {
           {profile ? (
             <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg">
               <Link href="/settings" title="Configurações">
-                <Avatar name={profile.full_name} />
+                <Avatar name={profile.full_name} imageUrl={profile.avatar_url} />
               </Link>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text-primary truncate">{profile.full_name}</p>

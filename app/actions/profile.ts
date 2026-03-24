@@ -12,6 +12,16 @@ export async function updateProfile(full_name: string) {
   return { success: true }
 }
 
+export async function updateAvatar(avatar_url: string) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+  const { error } = await supabase.from('profiles').update({ avatar_url }).eq('id', user.id)
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
+  return { success: true }
+}
+
 export async function updatePassword(password: string) {
   const supabase = createServerSupabaseClient()
   const { error } = await supabase.auth.updateUser({ password })
@@ -23,7 +33,6 @@ export async function deleteAccount() {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autenticado' }
-  // Delete all user data first
   await supabase.from('transactions').delete().eq('user_id', user.id)
   await supabase.from('budgets').delete().eq('user_id', user.id)
   await supabase.from('goals').delete().eq('user_id', user.id)
