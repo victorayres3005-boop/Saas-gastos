@@ -4,7 +4,6 @@ import { FileUp, X, Check, Loader2, AlertCircle, QrCode } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
-import { formatCurrency } from '@/lib/utils/formatters'
 import type { Account } from '@/lib/hooks/useAccounts'
 import { extractTextFromPDF, parsePixFromText, type ParsedPix } from '@/lib/utils/parsePix'
 

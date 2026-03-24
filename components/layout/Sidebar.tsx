@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, ArrowLeftRight, PieChart, LogOut, Target, RefreshCw, Settings, Wallet, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, PieChart, LogOut, Target, RefreshCw, Settings, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { useBudgetAlerts } from '@/lib/hooks/useBudgetAlerts'

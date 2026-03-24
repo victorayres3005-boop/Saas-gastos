@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Plus, Wallet, Pencil, Trash2, CreditCard, Utensils, Banknote, Building2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react'
+import { Plus, Wallet, Pencil, Trash2, CreditCard, Utensils, Banknote, Building2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import { useAccounts } from '@/lib/hooks/useAccounts'
 import { useRecurring } from '@/lib/hooks/useRecurring'
 import { useToast } from '@/components/ui/Toast'

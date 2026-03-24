@@ -14,10 +14,9 @@ export async function createAccount(data: {
   if (!user) return { error: 'Não autenticado' }
 
   // 'bank' é salvo localmente no cliente; aqui enviamos apenas os campos que existem no banco
-  const { bank: _, ...dbData } = data
   const { data: created, error } = await supabase
     .from('accounts')
-    .insert({ ...dbData, user_id: user.id })
+    .insert({ name: data.name, type: data.type, color: data.color, balance: data.balance, user_id: user.id })
     .select('id')
     .single()
   if (error) return { error: error.message }
@@ -35,7 +34,10 @@ export async function updateAccount(id: string, data: {
 }) {
   const supabase = createServerSupabaseClient()
 
-  const { bank: _, ...dbData } = data
+  const dbData: { name?: string; color?: string; balance?: number } = {}
+  if (data.name !== undefined)    dbData.name    = data.name
+  if (data.color !== undefined)   dbData.color   = data.color
+  if (data.balance !== undefined) dbData.balance = data.balance
   const { error } = await supabase.from('accounts').update(dbData).eq('id', id)
   if (error) return { error: error.message }
 

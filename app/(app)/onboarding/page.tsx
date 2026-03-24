@@ -12,7 +12,7 @@ import { setBankStorage } from '@/lib/hooks/useAccounts'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { getFirstName } from '@/lib/utils/formatters'
 import { BankLogo } from '@/components/ui/BankLogo'
-import { getBankById, BANKS } from '@/lib/utils/banks'
+import { getBankById } from '@/lib/utils/banks'
 
 const STEPS = ['Boas-vindas', 'Sua conta', 'Orçamentos', 'Primeira transação', 'Pronto!']
 

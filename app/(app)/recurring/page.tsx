@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Plus, RefreshCw, Trash2, Pause, Play, Pencil } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Pause, Play } from 'lucide-react'
 import { useRecurring, setRecurringAccountStorage } from '@/lib/hooks/useRecurring'
 import { useAccounts } from '@/lib/hooks/useAccounts'
 import { useToast } from '@/components/ui/Toast'
@@ -14,7 +14,6 @@ import { addRecurring, deleteRecurring, toggleRecurring } from '@/app/actions/re
 import { runRecurringProcessor } from '@/components/RecurringProcessor'
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
-import type { Recurring } from '@/lib/hooks/useRecurring'
 
 const FREQ_LABELS = { monthly: 'Mensal', weekly: 'Semanal', yearly: 'Anual' }
 const FREQ_OPTIONS = [
