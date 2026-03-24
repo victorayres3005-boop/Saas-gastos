@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { Plus, Target, Trash2, TrendingUp } from 'lucide-react'
+import { Plus, Target, Trash2, TrendingUp, RefreshCw } from 'lucide-react'
 import { useGoals } from '@/lib/hooks/useGoals'
 import { useAccounts } from '@/lib/hooks/useAccounts'
+import { useMarketRates, calcMonthlyYield, toAnnualPct } from '@/lib/hooks/useMarketRates'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -14,15 +15,30 @@ import { formatCurrency } from '@/lib/utils/formatters'
 
 const GOAL_COLORS = ['#FF6B35', '#16A34A', '#2563EB', '#DB2777', '#D97706', '#7C3AED']
 
+const INVESTMENT_TYPES = [
+  { value: 'none',     label: 'Sem rendimento',  desc: '' },
+  { value: 'cdb_100',  label: '100% CDI',        desc: 'CDB comum' },
+  { value: 'cdb_110',  label: '110% CDI',        desc: 'CDB premium' },
+  { value: 'selic',    label: 'Tesouro SELIC',   desc: 'Tesouro Direto' },
+  { value: 'poupanca', label: 'Poupança',         desc: '70% SELIC' },
+] as const
+
+type InvestmentType = typeof INVESTMENT_TYPES[number]['value']
+
 export default function GoalsPage() {
   const { goals, loading, refetch } = useGoals()
   const { accounts } = useAccounts()
+  const rates = useMarketRates()
   const { showToast } = useToast()
+
   const [modalOpen, setModalOpen] = useState(false)
   const [progressModal, setProgressModal] = useState<string | null>(null)
   const [depositValue, setDepositValue] = useState('')
   const [depositAccountId, setDepositAccountId] = useState('')
-  const [form, setForm] = useState({ title: '', target_value: '', current_value: '', deadline: '', color: GOAL_COLORS[0] })
+  const [form, setForm] = useState({
+    title: '', target_value: '', current_value: '', deadline: '',
+    color: GOAL_COLORS[0], investment_type: 'none' as InvestmentType,
+  })
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -36,10 +52,16 @@ export default function GoalsPage() {
       current_value: parseFloat(form.current_value || '0'),
       deadline: form.deadline || undefined,
       color: form.color,
+      investment_type: form.investment_type,
     })
     setSaving(false)
     if (result.error) showToast(result.error, 'error')
-    else { showToast('Meta criada!'); setModalOpen(false); refetch(); setForm({ title: '', target_value: '', current_value: '', deadline: '', color: GOAL_COLORS[0] }) }
+    else {
+      showToast('Meta criada!')
+      setModalOpen(false)
+      refetch()
+      setForm({ title: '', target_value: '', current_value: '', deadline: '', color: GOAL_COLORS[0], investment_type: 'none' })
+    }
   }
 
   const handleUpdateProgress = async () => {
@@ -49,12 +71,10 @@ export default function GoalsPage() {
     const goal = goals.find(g => g.id === progressModal)
     if (!goal) return
 
-    // Atualiza progresso da meta
     const newValue = goal.current_value + delta
     const result = await updateGoalProgress(progressModal, newValue)
     if (result.error) { showToast(result.error, 'error'); return }
 
-    // Registra transação de investimento vinculada
     await addTransaction({
       description: `Aporte: ${goal.title}`,
       value: delta,
@@ -80,6 +100,10 @@ export default function GoalsPage() {
     else { showToast('Meta removida'); refetch() }
   }
 
+  const cdiAnnual = toAnnualPct(rates.cdi)
+  const selicAnnual = toAnnualPct(rates.selic)
+  const hasRates = rates.cdi > 0
+
   return (
     <main className="p-8 min-h-screen">
       <div className="flex items-center justify-between mb-6">
@@ -90,6 +114,45 @@ export default function GoalsPage() {
         <Button onClick={() => setModalOpen(true)}>
           <Plus size={16} /> Nova meta
         </Button>
+      </div>
+
+      {/* Painel de taxas de mercado */}
+      <div className="bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
+            Taxas de mercado
+          </p>
+          {rates.date && (
+            <p className="text-[11px] text-text-tertiary flex items-center gap-1">
+              <RefreshCw size={10} />
+              Ref. {new Date(rates.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+            </p>
+          )}
+        </div>
+        {rates.loading ? (
+          <p className="text-xs text-text-tertiary">Carregando taxas...</p>
+        ) : !hasRates ? (
+          <p className="text-xs text-text-tertiary">
+            Taxas ainda não carregadas — aguarde o próximo dia útil ou dispare manualmente.
+          </p>
+        ) : (
+          <div className="flex gap-6 flex-wrap">
+            <div>
+              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">CDI</p>
+              <p className="text-lg font-bold text-text-primary">{cdiAnnual.toFixed(2)}% a.a.</p>
+              <p className="text-[11px] text-text-tertiary">{(rates.cdi * 100).toFixed(5)}% a.d.</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">SELIC</p>
+              <p className="text-lg font-bold text-text-primary">{selicAnnual.toFixed(2)}% a.a.</p>
+              <p className="text-[11px] text-text-tertiary">{(rates.selic * 100).toFixed(5)}% a.d.</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Poupança (70% SELIC)</p>
+              <p className="text-lg font-bold text-text-primary">{(selicAnnual * 0.7).toFixed(2)}% a.a.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -108,6 +171,11 @@ export default function GoalsPage() {
           {goals.map(goal => {
             const pct = Math.min((goal.current_value / goal.target_value) * 100, 100)
             const remaining = goal.target_value - goal.current_value
+            const invType = goal.investment_type ?? 'none'
+            const monthlyYield = calcMonthlyYield(goal.current_value, invType, rates.cdi, rates.selic)
+            const annualYield  = calcMonthlyYield(goal.current_value, invType, rates.cdi, rates.selic) * 12
+            const invLabel = INVESTMENT_TYPES.find(t => t.value === invType)?.label
+
             return (
               <div key={goal.id} className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
                 <div className="flex items-start justify-between mb-4">
@@ -118,7 +186,9 @@ export default function GoalsPage() {
                     <div>
                       <p className="text-sm font-semibold text-text-primary">{goal.title}</p>
                       {goal.deadline && (
-                        <p className="text-xs text-text-tertiary">até {new Date(goal.deadline + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</p>
+                        <p className="text-xs text-text-tertiary">
+                          até {new Date(goal.deadline + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -127,6 +197,7 @@ export default function GoalsPage() {
                   </button>
                 </div>
 
+                {/* Barra de progresso */}
                 <div className="mb-3">
                   <div className="flex justify-between mb-1.5">
                     <span className="text-xs text-text-tertiary">Progresso</span>
@@ -137,6 +208,7 @@ export default function GoalsPage() {
                   </div>
                 </div>
 
+                {/* Valores atual / meta */}
                 <div className="flex justify-between mb-4">
                   <div>
                     <p className="text-[11px] text-text-tertiary uppercase tracking-wide mb-0.5">Atual</p>
@@ -147,6 +219,26 @@ export default function GoalsPage() {
                     <p className="text-base font-bold text-text-primary">{formatCurrency(goal.target_value)}</p>
                   </div>
                 </div>
+
+                {/* Rendimento estimado */}
+                {invType !== 'none' && hasRates && goal.current_value > 0 && (
+                  <div className="bg-green-50 rounded-lg px-3 py-2.5 mb-3 border border-green-100">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <TrendingUp size={11} className="text-green-600" />
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-green-700">{invLabel}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="text-[10px] text-green-600 mb-0.5">Est. mensal</p>
+                        <p className="text-sm font-bold text-green-700">+{formatCurrency(monthlyYield)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-green-600 mb-0.5">Est. anual</p>
+                        <p className="text-sm font-bold text-green-700">+{formatCurrency(annualYield)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {pct < 100 ? (
                   <div className="flex items-center justify-between">
@@ -173,24 +265,64 @@ export default function GoalsPage() {
         </div>
       )}
 
-      {/* Add Goal Modal */}
+      {/* Modal Nova Meta */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Nova Meta">
         <form onSubmit={handleAdd} className="space-y-4">
-          <Input label="Título" placeholder="Ex: Reserva de emergência" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
-          <Input label="Valor alvo (R$)" type="number" step="0.01" min="1" placeholder="10000,00" value={form.target_value} onChange={e => setForm(f => ({ ...f, target_value: e.target.value }))} required />
-          <Input label="Valor atual (R$)" type="number" step="0.01" min="0" placeholder="0,00" value={form.current_value} onChange={e => setForm(f => ({ ...f, current_value: e.target.value }))} />
-          <Input label="Prazo (opcional)" type="month" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+          <Input label="Título" placeholder="Ex: Reserva de emergência" value={form.title}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+          <Input label="Valor alvo (R$)" type="number" step="0.01" min="1" placeholder="10000,00"
+            value={form.target_value} onChange={e => setForm(f => ({ ...f, target_value: e.target.value }))} required />
+          <Input label="Valor atual (R$)" type="number" step="0.01" min="0" placeholder="0,00"
+            value={form.current_value} onChange={e => setForm(f => ({ ...f, current_value: e.target.value }))} />
+          <Input label="Prazo (opcional)" type="month" value={form.deadline}
+            onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+
+          {/* Tipo de investimento */}
+          <div>
+            <label className="text-sm font-medium text-text-primary block mb-1.5">
+              Tipo de investimento
+              {hasRates && <span className="text-xs font-normal text-text-tertiary ml-1">(CDI: {cdiAnnual.toFixed(1)}% a.a.)</span>}
+            </label>
+            <div className="flex flex-col gap-1.5">
+              {INVESTMENT_TYPES.map(({ value, label, desc }) => {
+                const selected = form.investment_type === value
+                let yieldPreview = ''
+                const previewValue = parseFloat(form.current_value || '0')
+                if (value !== 'none' && hasRates && previewValue > 0) {
+                  const m = calcMonthlyYield(previewValue, value, rates.cdi, rates.selic)
+                  yieldPreview = `+${m.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês`
+                }
+                return (
+                  <button key={value} type="button"
+                    onClick={() => setForm(f => ({ ...f, investment_type: value }))}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors text-left"
+                    style={selected
+                      ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#166534' }
+                      : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}>
+                    <div>
+                      <span className="font-medium">{label}</span>
+                      {desc && <span className="text-xs ml-1.5 opacity-60">{desc}</span>}
+                    </div>
+                    {yieldPreview && (
+                      <span className="text-xs font-semibold text-green-600">{yieldPreview}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="text-sm font-medium text-text-primary block mb-1.5">Cor</label>
             <div className="flex gap-2">
               {GOAL_COLORS.map(c => (
                 <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
                   className="w-7 h-7 rounded-full border-2 transition-all"
-                  style={{ backgroundColor: c, borderColor: form.color === c ? '#0A0A0A' : 'transparent' }}
-                />
+                  style={{ backgroundColor: c, borderColor: form.color === c ? '#0A0A0A' : 'transparent' }} />
               ))}
             </div>
           </div>
+
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} className="flex-1">Cancelar</Button>
             <Button type="submit" loading={saving} loadingText="Salvando..." className="flex-1">Criar meta</Button>
@@ -208,43 +340,53 @@ export default function GoalsPage() {
         loading={deleting}
       />
 
-      {/* Deposit Modal */}
+      {/* Modal Registrar Aporte */}
       <Modal isOpen={!!progressModal} onClose={() => { setProgressModal(null); setDepositValue('') }} title="Registrar aporte">
         <div className="space-y-4">
           {progressModal && (() => {
             const goal = goals.find(g => g.id === progressModal)
             if (!goal) return null
             const remaining = goal.target_value - goal.current_value
+            const invType = goal.investment_type ?? 'none'
+            const depositNum = parseFloat(depositValue || '0')
+            const newTotal = goal.current_value + depositNum
+            const newMonthly = calcMonthlyYield(newTotal, invType, rates.cdi, rates.selic)
+
             return (
-              <div className="bg-bg-page rounded-lg p-3 text-sm">
-                <p className="font-medium text-text-primary">{goal.title}</p>
-                <p className="text-xs text-text-tertiary mt-0.5">
-                  Faltam <span className="font-semibold text-text-secondary">{remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span> para atingir a meta
-                </p>
-              </div>
+              <>
+                <div className="bg-bg-page rounded-lg p-3 text-sm">
+                  <p className="font-medium text-text-primary">{goal.title}</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">
+                    Faltam <span className="font-semibold text-text-secondary">
+                      {remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span> para atingir a meta
+                  </p>
+                </div>
+                {invType !== 'none' && hasRates && newMonthly > 0 && (
+                  <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs text-green-700">
+                    <TrendingUp size={11} className="inline mr-1" />
+                    Após aporte: rendimento estimado de <strong>{formatCurrency(newMonthly)}/mês</strong>
+                  </div>
+                )}
+              </>
             )
           })()}
-          <Input
-            label="Valor do aporte (R$)"
-            type="number" step="0.01" min="0.01"
-            placeholder="0,00"
-            value={depositValue}
-            onChange={e => setDepositValue(e.target.value)}
-            autoFocus
-          />
+
+          <Input label="Valor do aporte (R$)" type="number" step="0.01" min="0.01"
+            placeholder="0,00" value={depositValue}
+            onChange={e => setDepositValue(e.target.value)} autoFocus />
+
           {accounts.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text-primary">Debitar de (opcional)</label>
-              <select
-                value={depositAccountId}
-                onChange={e => setDepositAccountId(e.target.value)}
-                className="w-full h-9 px-3 border border-border rounded-lg text-sm bg-white outline-none focus:border-accent"
-              >
+              <select value={depositAccountId} onChange={e => setDepositAccountId(e.target.value)}
+                className="w-full h-9 px-3 border border-border rounded-lg text-sm bg-white outline-none focus:border-accent">
                 <option value="">Sem conta específica</option>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
           )}
+
           <p className="text-xs text-text-tertiary">Uma transação de investimento será registrada automaticamente.</p>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => { setProgressModal(null); setDepositValue(''); setDepositAccountId('') }} className="flex-1">Cancelar</Button>

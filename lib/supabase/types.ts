@@ -121,6 +121,7 @@ export type Database = {
           current_value: number
           deadline: string | null
           color: string
+          investment_type: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
           created_at: string
         }
         Insert: {
@@ -131,6 +132,7 @@ export type Database = {
           current_value?: number
           deadline?: string | null
           color?: string
+          investment_type?: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
           created_at?: string
         }
         Update: {
@@ -141,7 +143,29 @@ export type Database = {
           current_value?: number
           deadline?: string | null
           color?: string
+          investment_type?: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
           created_at?: string
+        }
+        Relationships: []
+      }
+      market_rates: {
+        Row: {
+          id: string
+          value: number
+          reference_date: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          value: number
+          reference_date: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          value?: number
+          reference_date?: string
+          updated_at?: string
         }
         Relationships: []
       }

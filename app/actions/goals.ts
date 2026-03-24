@@ -8,6 +8,7 @@ export async function addGoal(data: {
   current_value: number
   deadline?: string
   color: string
+  investment_type?: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
 }) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
