@@ -91,8 +91,14 @@ export default function DashboardPage() {
     accounts.reduce((s, a) => s + a.balance, 0)
   , [accounts])
 
+  // Soma líquida (despesas − receitas) — usada para calcular saldo disponível
   const totalSpentAllTime = useMemo(() =>
     allTransactions.reduce((s, t) => s + t.value, 0)
+  , [allTransactions])
+
+  // Só despesas (value > 0) — usado para exibição de "Total Gasto"
+  const totalExpenseAllTime = useMemo(() =>
+    allTransactions.filter(t => t.value > 0).reduce((s, t) => s + t.value, 0)
   , [allTransactions])
 
   // Recorrentes sem transação este mês (processor não rodou ou falhou)
@@ -109,7 +115,7 @@ export default function DashboardPage() {
 
   // Saldo disponível = saldo inicial - transações - recorrentes sem transação este mês
   const availableBalance = totalBalance - totalSpentAllTime - uncoveredRecurring
-  const spentPercent = totalBalance > 0 ? Math.min((Math.abs(totalSpentAllTime) / totalBalance) * 100, 100) : 0
+  const spentPercent = totalBalance > 0 ? Math.min((totalExpenseAllTime / totalBalance) * 100, 100) : 0
 
   // Metrics mensais
   const totalSpent = useMemo(() =>
@@ -273,7 +279,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-text-secondary mb-0.5">Total Gasto</p>
-              <p className="text-lg font-semibold text-text-primary">{formatCurrency(totalSpentAllTime)}</p>
+              <p className="text-lg font-semibold text-text-primary">{formatCurrency(totalExpenseAllTime)}</p>
             </div>
           </div>
 
