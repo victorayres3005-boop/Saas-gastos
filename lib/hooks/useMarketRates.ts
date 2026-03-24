@@ -1,19 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-
-export type MarketRate = {
-  id: string
-  value: number          // taxa diária em decimal (ex: 0.00041854)
-  reference_date: string
-  updated_at: string
-}
 
 export type Rates = {
-  cdi: number   // taxa diária CDI em decimal
-  selic: number // taxa diária SELIC em decimal
-  date: string  // data de referência
+  cdi: number    // taxa diária CDI em decimal (ex: 0.00041854)
+  selic: number  // taxa diária SELIC em decimal
+  date: string   // data de referência (YYYY-MM-DD)
   loading: boolean
+  error: boolean
 }
 
 // Calcula rendimento mensal estimado dado principal e tipo de investimento
@@ -24,7 +17,7 @@ export function calcMonthlyYield(
   selicDaily: number,
 ): number {
   if (!principal || investmentType === 'none') return 0
-  const days = 21.75  // média de dias úteis por mês
+  const days = 21.75 // média de dias úteis por mês
 
   let r = 0
   if      (investmentType === 'cdb_100')  r = cdiDaily
@@ -41,24 +34,19 @@ export function toAnnualPct(dailyRate: number): number {
 }
 
 export function useMarketRates(): Rates {
-  const [rates, setRates] = useState<Rates>({ cdi: 0, selic: 0, date: '', loading: true })
+  const [rates, setRates] = useState<Rates>({ cdi: 0, selic: 0, date: '', loading: true, error: false })
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('market_rates')
-      .select('*')
-      .then(({ data }) => {
-        const rows = (data ?? []) as MarketRate[]
-        const cdi   = rows.find(r => r.id === 'cdi_daily')
-        const selic = rows.find(r => r.id === 'selic_daily')
-        setRates({
-          cdi:    cdi?.value   ?? 0,
-          selic:  selic?.value ?? 0,
-          date:   cdi?.reference_date ?? '',
-          loading: false,
-        })
+    fetch('/api/rates')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          setRates(r => ({ ...r, loading: false, error: true }))
+        } else {
+          setRates({ cdi: data.cdi, selic: data.selic, date: data.date, loading: false, error: false })
+        }
       })
+      .catch(() => setRates(r => ({ ...r, loading: false, error: true })))
   }, [])
 
   return rates

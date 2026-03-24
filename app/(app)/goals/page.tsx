@@ -161,26 +161,34 @@ export default function GoalsPage() {
           </div>
         </div>
         {rates.loading ? (
-          <p className="text-xs text-text-tertiary">Carregando taxas...</p>
-        ) : !hasRates ? (
-          <p className="text-xs text-text-tertiary">
-            Taxas ainda não carregadas — aguarde o próximo dia útil ou dispare manualmente.
+          <div className="flex items-center gap-2 text-xs text-text-tertiary">
+            <RefreshCw size={11} className="animate-spin" /> Buscando taxas do Banco Central...
+          </div>
+        ) : rates.error ? (
+          <p className="text-xs text-red-500">
+            Não foi possível obter as taxas. Verifique sua conexão e tente novamente.
           </p>
         ) : (
-          <div className="flex gap-6 flex-wrap">
+          <div className="flex gap-8 flex-wrap">
             <div>
               <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">CDI</p>
-              <p className="text-lg font-bold text-text-primary">{cdiAnnual.toFixed(2)}% a.a.</p>
+              <p className="text-xl font-bold text-text-primary">{cdiAnnual.toFixed(2)}%<span className="text-xs font-normal text-text-tertiary ml-1">a.a.</span></p>
               <p className="text-[11px] text-text-tertiary">{(rates.cdi * 100).toFixed(5)}% a.d.</p>
             </div>
             <div>
               <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">SELIC</p>
-              <p className="text-lg font-bold text-text-primary">{selicAnnual.toFixed(2)}% a.a.</p>
+              <p className="text-xl font-bold text-text-primary">{selicAnnual.toFixed(2)}%<span className="text-xs font-normal text-text-tertiary ml-1">a.a.</span></p>
               <p className="text-[11px] text-text-tertiary">{(rates.selic * 100).toFixed(5)}% a.d.</p>
             </div>
             <div>
-              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Poupança (70% SELIC)</p>
-              <p className="text-lg font-bold text-text-primary">{(selicAnnual * 0.7).toFixed(2)}% a.a.</p>
+              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">110% CDI</p>
+              <p className="text-xl font-bold text-text-primary">{(cdiAnnual * 1.1).toFixed(2)}%<span className="text-xs font-normal text-text-tertiary ml-1">a.a.</span></p>
+              <p className="text-[11px] text-text-tertiary">CDB premium</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Poupança</p>
+              <p className="text-xl font-bold text-text-primary">{(selicAnnual * 0.7).toFixed(2)}%<span className="text-xs font-normal text-text-tertiary ml-1">a.a.</span></p>
+              <p className="text-[11px] text-text-tertiary">70% SELIC</p>
             </div>
           </div>
         )}
