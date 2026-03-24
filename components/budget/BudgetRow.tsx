@@ -10,10 +10,11 @@ interface BudgetRowProps {
   category: CategoryKey
   spent: number
   limit: number
+  recurringAmount?: number
   onUpdate: (limit: number) => void
 }
 
-export function BudgetRow({ category, spent, limit, onUpdate }: BudgetRowProps) {
+export function BudgetRow({ category, spent, limit, recurringAmount = 0, onUpdate }: BudgetRowProps) {
   const [editing, setEditing] = useState(false)
   const [inputValue, setInputValue] = useState(limit.toString())
 
@@ -32,7 +33,14 @@ export function BudgetRow({ category, spent, limit, onUpdate }: BudgetRowProps) 
       </div>
       <div className="flex-1">
         <div className="flex justify-between mb-1.5">
-          <span className="text-sm text-text-secondary">{formatCurrency(spent)}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-secondary">{formatCurrency(spent)}</span>
+            {recurringAmount > 0 && (
+              <span className="text-xs text-text-tertiary" title="Recorrentes vinculados">
+                +{formatCurrency(recurringAmount)}/mês
+              </span>
+            )}
+          </div>
           <span className={`text-sm font-medium ${statusColor}`}>{pct.toFixed(0)}%</span>
         </div>
         <ProgressBar value={spent} max={limit} />

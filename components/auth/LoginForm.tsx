@@ -21,7 +21,10 @@ export function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) setError('Email ou senha incorretos')
-    else router.push('/dashboard')
+    else {
+      router.refresh()
+      router.push('/dashboard')
+    }
   }
 
   return (

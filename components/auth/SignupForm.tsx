@@ -1,19 +1,19 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
+import { MailCheck } from 'lucide-react'
 
 export function SignupForm() {
-  const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [emailSent, setEmailSent] = useState(false)
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -39,7 +39,7 @@ export function SignupForm() {
       if (error.message.includes('already')) setErrors({ email: 'Email já cadastrado' })
       else setErrors({ general: error.message })
     } else {
-      router.push('/dashboard')
+      setEmailSent(true)
     }
   }
 
@@ -52,20 +52,42 @@ export function SignupForm() {
           </div>
           <span className="font-bold text-lg text-text-primary">FinanceTrack</span>
         </div>
-        <h1 className="text-2xl font-bold text-text-primary mb-1">Criar sua conta</h1>
-        <p className="text-sm text-text-secondary mb-7">Comece a controlar seus gastos hoje</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Nome completo" placeholder="João Silva" value={fullName} onChange={e => setFullName(e.target.value)} required />
-          <Input label="Email" type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} error={errors.email} required />
-          <Input label="Senha" showPasswordToggle placeholder="Mínimo 8 caracteres" value={password} onChange={e => setPassword(e.target.value)} error={errors.password} required />
-          <Input label="Confirmar senha" showPasswordToggle placeholder="Repita a senha" value={confirm} onChange={e => setConfirm(e.target.value)} error={errors.confirm} required />
-          {errors.general && <p className="text-sm text-negative">{errors.general}</p>}
-          <Button type="submit" loading={loading} loadingText="Criando conta..." className="w-full mt-2">Criar conta</Button>
-        </form>
-        <p className="text-center text-sm text-text-secondary mt-5">
-          Já tem conta?{' '}
-          <Link href="/login" className="text-accent font-medium hover:text-accent-text">Entrar</Link>
-        </p>
+
+        {emailSent ? (
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full bg-accent-light flex items-center justify-center mx-auto mb-4">
+              <MailCheck size={24} className="text-accent" />
+            </div>
+            <h1 className="text-xl font-bold text-text-primary mb-2">Confirme seu email</h1>
+            <p className="text-sm text-text-secondary mb-1">
+              Enviamos um link de confirmação para:
+            </p>
+            <p className="text-sm font-medium text-text-primary mb-4">{email}</p>
+            <p className="text-sm text-text-secondary mb-6">
+              Clique no link do email para ativar sua conta e depois faça login.
+            </p>
+            <Link href="/login" className="text-sm text-accent font-medium hover:text-accent-text">
+              Ir para o login →
+            </Link>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold text-text-primary mb-1">Criar sua conta</h1>
+            <p className="text-sm text-text-secondary mb-7">Comece a controlar seus gastos hoje</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input label="Nome completo" placeholder="João Silva" value={fullName} onChange={e => setFullName(e.target.value)} required />
+              <Input label="Email" type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} error={errors.email} required />
+              <Input label="Senha" showPasswordToggle placeholder="Mínimo 8 caracteres" value={password} onChange={e => setPassword(e.target.value)} error={errors.password} required />
+              <Input label="Confirmar senha" showPasswordToggle placeholder="Repita a senha" value={confirm} onChange={e => setConfirm(e.target.value)} error={errors.confirm} required />
+              {errors.general && <p className="text-sm text-negative">{errors.general}</p>}
+              <Button type="submit" loading={loading} loadingText="Criando conta..." className="w-full mt-2">Criar conta</Button>
+            </form>
+            <p className="text-center text-sm text-text-secondary mt-5">
+              Já tem conta?{' '}
+              <Link href="/login" className="text-accent font-medium hover:text-accent-text">Entrar</Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   )

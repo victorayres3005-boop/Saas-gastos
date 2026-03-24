@@ -7,9 +7,12 @@ import { DonutChart } from '@/components/charts/DonutChart'
 import { LineChart } from '@/components/charts/LineChart'
 import { ActivityHeatmap } from '@/components/charts/ActivityHeatmap'
 import { useTransactions } from '@/lib/hooks/useTransactions'
+import { useAccounts } from '@/lib/hooks/useAccounts'
+import { useRecurring } from '@/lib/hooks/useRecurring'
 import { useProfile } from '@/lib/hooks/useProfile'
-import { CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
-import { formatMonthYear, getFirstName } from '@/lib/utils/formatters'
+import { CATEGORIES, EXPENSE_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
+import { AccountBadge } from '@/components/ui/AccountBadge'
+import { formatCurrency, formatMonthYear, getFirstName } from '@/lib/utils/formatters'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/types'
 
@@ -19,10 +22,13 @@ export default function DashboardPage() {
   const now = new Date()
   const [currentDate, setCurrentDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const { transactions, loading } = useTransactions(currentDate.getMonth(), currentDate.getFullYear())
+  const { accounts } = useAccounts()
+  const { items: recurring } = useRecurring()
   const { profile } = useProfile()
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
   const [activeCategories, setActiveCategories] = useState<Set<CategoryKey>>(new Set())
   const [prevMonthTxs, setPrevMonthTxs] = useState<Transaction[]>([])
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -31,6 +37,8 @@ export default function DashboardPage() {
       setAllTransactions((data as Transaction[]) || [])
     }
     fetchAll()
+    window.addEventListener('fintrack:transactions-updated', fetchAll)
+    return () => window.removeEventListener('fintrack:transactions-updated', fetchAll)
   }, [])
 
   useEffect(() => {
@@ -48,10 +56,15 @@ export default function DashboardPage() {
   const prevMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
   const nextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
 
+  const displayTransactions = useMemo(() => {
+    if (!selectedAccount) return transactions
+    return transactions.filter(t => t.account_id === selectedAccount)
+  }, [transactions, selectedAccount])
+
   const filtered = useMemo(() => {
-    if (activeCategories.size === 0) return transactions
-    return transactions.filter(t => activeCategories.has(t.category as CategoryKey))
-  }, [transactions, activeCategories])
+    if (activeCategories.size === 0) return displayTransactions
+    return displayTransactions.filter(t => activeCategories.has(t.category as CategoryKey))
+  }, [displayTransactions, activeCategories])
 
   const toggleCategory = (cat: CategoryKey) => {
     setActiveCategories(prev => {
@@ -62,25 +75,82 @@ export default function DashboardPage() {
     })
   }
 
-  // Metrics
+  // Recorrentes ativos
+  const activeRecurring = useMemo(() => recurring.filter(r => r.active), [recurring])
+
+  const monthlyAmount = (r: { value: number; frequency: string }) => {
+    const v = Math.abs(r.value)
+    if (r.frequency === 'monthly') return v
+    if (r.frequency === 'weekly')  return v * 4.33
+    if (r.frequency === 'yearly')  return v / 12
+    return 0
+  }
+
+  // Balance overview
+  const totalBalance = useMemo(() =>
+    accounts.reduce((s, a) => s + a.balance, 0)
+  , [accounts])
+
+  const totalSpentAllTime = useMemo(() =>
+    allTransactions.reduce((s, t) => s + t.value, 0)
+  , [allTransactions])
+
+  // Recorrentes sem transação este mês (processor não rodou ou falhou)
+  // Inclui receitas E despesas recorrentes para o saldo disponível
+  const uncoveredRecurring = useMemo(() => {
+    const thisMonth = new Date().toISOString().slice(0, 7)
+    return activeRecurring.reduce((s, r) => {
+      const hasTx = allTransactions.some(t =>
+        t.date.startsWith(thisMonth) && t.value === r.value && t.description === r.description
+      )
+      return hasTx ? s : s + r.value
+    }, 0)
+  }, [activeRecurring, allTransactions])
+
+  // Saldo disponível = saldo inicial - transações - recorrentes sem transação este mês
+  const availableBalance = totalBalance - totalSpentAllTime - uncoveredRecurring
+  const spentPercent = totalBalance > 0 ? Math.min((Math.abs(totalSpentAllTime) / totalBalance) * 100, 100) : 0
+
+  // Metrics mensais
   const totalSpent = useMemo(() =>
-    filtered.filter(t => t.category !== 'invest').reduce((s, t) => s + t.value, 0), [filtered])
+    filtered.filter(t => t.value > 0 && t.category !== 'invest').reduce((s, t) => s + t.value, 0), [filtered])
+  const totalIncomeFromTx = useMemo(() =>
+    filtered.filter(t => t.value < 0).reduce((s, t) => s + Math.abs(t.value), 0), [filtered])
   const totalInvested = useMemo(() =>
-    filtered.filter(t => t.category === 'invest').reduce((s, t) => s + t.value, 0), [filtered])
+    filtered.filter(t => t.category === 'invest' && t.value > 0).reduce((s, t) => s + t.value, 0), [filtered])
   const txCount = filtered.length
 
-  const prevSpent = prevMonthTxs.filter(t => t.category !== 'invest').reduce((s, t) => s + t.value, 0)
+  const prevSpent = prevMonthTxs.filter(t => t.value > 0 && t.category !== 'invest').reduce((s, t) => s + t.value, 0)
   const spentChange = prevSpent > 0 ? ((totalSpent - prevSpent) / prevSpent) * 100 : 0
 
-  // Donut data
+  // Donut data — só despesas
   const donutData = useMemo(() => {
     const map = new Map<CategoryKey, number>()
-    filtered.forEach(t => {
+    filtered.filter(t => t.value > 0).forEach(t => {
       const k = t.category as CategoryKey
       map.set(k, (map.get(k) || 0) + t.value)
     })
     return Array.from(map.entries()).map(([category, total]) => ({ category, total }))
   }, [filtered])
+
+  const recurringMonthlyExpense = useMemo(() =>
+    activeRecurring.filter(r => r.value > 0).reduce((s, r) => s + monthlyAmount(r), 0), [activeRecurring])
+
+  // Receitas recorrentes sem transação este mês (para o card de Receitas)
+  const pendingRecurringIncome = useMemo(() => {
+    const thisMonth = new Date().toISOString().slice(0, 7)
+    return activeRecurring
+      .filter(r => r.value < 0)
+      .reduce((s, r) => {
+        const hasTx = transactions.some(t =>
+          t.date.startsWith(thisMonth) && t.value === r.value && t.description === r.description
+        )
+        return hasTx ? s : s + monthlyAmount(r)
+      }, 0)
+  }, [activeRecurring, transactions])
+
+  // Receita total = transações reais + recorrentes ainda não processados
+  const totalIncome = totalIncomeFromTx + pendingRecurringIncome
 
   // Line chart data (last 6 months)
   const lineData = useMemo(() => {
@@ -90,24 +160,26 @@ export default function DashboardPage() {
       const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const monthLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
       const row: { month: string; [k: string]: number | string } = { month: monthLabel }
+      const sourceTxs = selectedAccount ? allTransactions.filter(t => t.account_id === selectedAccount) : allTransactions
       Object.keys(CATEGORIES).forEach(cat => {
-        row[cat] = allTransactions
+        row[cat] = sourceTxs
           .filter(t => t.category === cat && t.date.startsWith(monthKey))
           .reduce((s, t) => s + t.value, 0)
       })
       months.push(row)
     }
     return months
-  }, [allTransactions, currentDate])
+  }, [allTransactions, currentDate, selectedAccount])
 
   // Heatmap data
   const heatmapData = useMemo(() => {
     const map = new Map<string, number>()
-    allTransactions.forEach(t => {
+    const sourceTxs = selectedAccount ? allTransactions.filter(t => t.account_id === selectedAccount) : allTransactions
+    sourceTxs.forEach(t => {
       map.set(t.date, (map.get(t.date) || 0) + t.value)
     })
     return Array.from(map.entries()).map(([date, value]) => ({ date, value }))
-  }, [allTransactions])
+  }, [allTransactions, selectedAccount])
 
   const firstName = profile ? getFirstName(profile.full_name) : ''
 
@@ -122,7 +194,7 @@ export default function DashboardPage() {
           <p className="text-sm text-text-secondary">Visão consolidada dos seus gastos.</p>
           {/* Category chips */}
           <div className="flex gap-2 mt-3 flex-wrap">
-            {(Object.keys(CATEGORIES) as CategoryKey[]).map(cat => (
+            {EXPENSE_CATEGORIES.map(cat => (
               <button
                 key={cat}
                 onClick={() => toggleCategory(cat)}
@@ -137,6 +209,31 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
+          {/* Account switcher */}
+          {accounts.length > 0 && (
+            <div className="flex gap-2 mt-4 flex-wrap">
+              <button
+                onClick={() => setSelectedAccount(null)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${!selectedAccount ? 'bg-accent text-white border-accent' : 'border-border bg-white text-text-secondary hover:border-accent'}`}
+              >
+                Visão Geral
+              </button>
+              {accounts.map(acc => (
+                <button
+                  key={acc.id}
+                  onClick={() => setSelectedAccount(acc.id)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5"
+                  style={selectedAccount === acc.id
+                    ? { backgroundColor: acc.color, color: 'white', borderColor: acc.color }
+                    : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }
+                  }
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedAccount === acc.id ? 'white' : acc.color }} />
+                  {acc.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-white hover:bg-bg-page text-text-secondary">
@@ -151,19 +248,105 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Balance Overview */}
+      {accounts.length > 0 && (
+        <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
+              {selectedAccount ? accounts.find(a => a.id === selectedAccount)?.name ?? 'Conta' : 'Saldo Geral'}
+            </p>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${spentPercent >= 90 ? 'bg-red-50 text-red-600' : spentPercent >= 70 ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'}`}>
+              {spentPercent.toFixed(1)}% comprometido
+            </span>
+          </div>
+
+          <div className="flex items-end gap-8 mb-4 flex-wrap">
+            <div>
+              <p className="text-xs text-text-secondary mb-0.5">Disponível</p>
+              <p className={`text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {formatCurrency(availableBalance)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-text-secondary mb-0.5">Saldo Total</p>
+              <p className="text-lg font-semibold text-text-primary">{formatCurrency(totalBalance)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-text-secondary mb-0.5">Total Gasto</p>
+              <p className="text-lg font-semibold text-text-primary">{formatCurrency(totalSpentAllTime)}</p>
+            </div>
+          </div>
+
+          {/* Barra de progresso */}
+          <div className="w-full h-2 bg-bg-page rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${spentPercent >= 90 ? 'bg-red-500' : spentPercent >= 70 ? 'bg-yellow-400' : 'bg-accent'}`}
+              style={{ width: `${spentPercent}%` }}
+            />
+          </div>
+
+          {/* Breakdown por conta na visão geral */}
+          {!selectedAccount && accounts.length > 1 && (
+            <div className="flex gap-5 mt-4 flex-wrap">
+              {accounts.map(acc => {
+                const accSpent = allTransactions.filter(t => t.account_id === acc.id).reduce((s, t) => s + t.value, 0)
+                const accAvail = acc.balance - accSpent
+                return (
+                  <div key={acc.id} className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
+                    <span className="text-xs text-text-secondary">{acc.name}:</span>
+                    <span className={`text-xs font-semibold ${accAvail >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {formatCurrency(accAvail)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {loading ? (
           Array(4).fill(0).map((_, i) => <MetricCardSkeleton key={i} />)
         ) : (
           <>
-            <MetricCard label="Total Gasto" value={totalSpent} change={spentChange} />
-            <MetricCard label="Total Investido" value={totalInvested} />
+            <MetricCard label="Despesas" value={totalSpent} change={spentChange} />
+            <MetricCard label="Receitas" value={totalIncome} />
+            <MetricCard label="Investido" value={totalInvested} />
             <MetricCard label="Transações" value={txCount} isCurrency={false} isCount />
-            <MetricCard label="Categorias Ativas" value={donutData.length} isCurrency={false} isCount subtitle={`de ${Object.keys(CATEGORIES).length} categorias`} />
           </>
         )}
       </div>
+
+      {/* Recorrentes */}
+      {activeRecurring.length > 0 && (
+        <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Compromissos Recorrentes</p>
+            <span className="text-xs text-text-tertiary">{formatCurrency(recurringMonthlyExpense)}/mês em despesas fixas</span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {activeRecurring.map(r => {
+              const account = r.account_id ? accounts.find(a => a.id === r.account_id) : undefined
+              const isIncome = r.value < 0
+              return (
+                <div key={r.id} className="flex items-center gap-3 py-2 border-b border-border-light last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">{r.description}</p>
+                    <p className="text-xs text-text-tertiary capitalize">{r.frequency === 'monthly' ? 'Mensal' : r.frequency === 'weekly' ? 'Semanal' : 'Anual'}</p>
+                  </div>
+                  {account && <AccountBadge account={account} size="sm" />}
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: isIncome ? '#16A34A' : '#DC2626' }}>
+                    {isIncome ? '+' : '-'}{formatCurrency(Math.abs(r.value))}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">

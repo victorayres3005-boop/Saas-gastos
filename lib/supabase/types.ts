@@ -22,14 +22,49 @@ export type Database = {
         }
         Relationships: []
       }
+      accounts: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          type: 'meal_voucher' | 'credit' | 'debit' | 'cash' | 'checking'
+          color: string
+          balance: number
+          bank: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          type: 'meal_voucher' | 'credit' | 'debit' | 'cash' | 'checking'
+          color?: string
+          balance?: number
+          bank?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          type?: 'meal_voucher' | 'credit' | 'debit' | 'cash' | 'checking'
+          color?: string
+          balance?: number
+          bank?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           id: string
           user_id: string
           description: string
           value: number
-          category: 'food' | 'saas' | 'transport' | 'leisure' | 'invest'
+          category: 'food' | 'saas' | 'transport' | 'leisure' | 'invest' | 'health' | 'education' | 'housing' | 'other' | 'salary' | 'freelance' | 'rent_income' | 'dividend' | 'other_income'
           date: string
+          notes: string | null
+          account_id: string | null
           created_at: string
         }
         Insert: {
@@ -37,8 +72,10 @@ export type Database = {
           user_id: string
           description: string
           value: number
-          category: 'food' | 'saas' | 'transport' | 'leisure' | 'invest'
+          category: 'food' | 'saas' | 'transport' | 'leisure' | 'invest' | 'health' | 'education' | 'housing' | 'other' | 'salary' | 'freelance' | 'rent_income' | 'dividend' | 'other_income'
           date?: string
+          notes?: string | null | undefined
+          account_id?: string | null
           created_at?: string
         }
         Update: {
@@ -46,8 +83,10 @@ export type Database = {
           user_id?: string
           description?: string
           value?: number
-          category?: 'food' | 'saas' | 'transport' | 'leisure' | 'invest'
+          category?: 'food' | 'saas' | 'transport' | 'leisure' | 'invest' | 'health' | 'education' | 'housing' | 'other' | 'salary' | 'freelance' | 'rent_income' | 'dividend' | 'other_income'
           date?: string
+          notes?: string | null
+          account_id?: string | null
           created_at?: string
         }
         Relationships: []
@@ -70,6 +109,78 @@ export type Database = {
           user_id?: string
           category?: string
           limit_value?: number
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          target_value: number
+          current_value: number
+          deadline: string | null
+          color: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          target_value: number
+          current_value?: number
+          deadline?: string | null
+          color?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          target_value?: number
+          current_value?: number
+          deadline?: string | null
+          color?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          description: string
+          value: number
+          category: string
+          frequency: 'monthly' | 'weekly' | 'yearly'
+          next_date: string
+          active: boolean
+          account_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          description: string
+          value: number
+          category: string
+          frequency: 'monthly' | 'weekly' | 'yearly'
+          next_date: string
+          active?: boolean
+          account_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          description?: string
+          value?: number
+          category?: string
+          frequency?: 'monthly' | 'weekly' | 'yearly'
+          next_date?: string
+          active?: boolean
+          account_id?: string | null
+          created_at?: string
         }
         Relationships: []
       }

@@ -1,0 +1,631 @@
+'use client'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Plus, Wallet, Pencil, Trash2, CreditCard, Utensils, Banknote, Building2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react'
+import { useAccounts } from '@/lib/hooks/useAccounts'
+import { useRecurring } from '@/lib/hooks/useRecurring'
+import { useToast } from '@/components/ui/Toast'
+import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
+import { BankLogo } from '@/components/ui/BankLogo'
+import { CategoryBadge } from '@/components/ui/CategoryBadge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { createAccount, updateAccount, deleteAccount } from '@/app/actions/accounts'
+import { setBankStorage } from '@/lib/hooks/useAccounts'
+import { formatCurrency, formatDate } from '@/lib/utils/formatters'
+import { BANKS, BANK_CATEGORIES, getBankById, getBanksByCategory, type BankCategory } from '@/lib/utils/banks'
+import { createClient } from '@/lib/supabase/client'
+import type { Account } from '@/lib/hooks/useAccounts'
+import type { Database } from '@/lib/supabase/types'
+import type { CategoryKey } from '@/lib/utils/categories'
+
+type Transaction = Database['public']['Tables']['transactions']['Row']
+
+// ─── Constantes ────────────────────────────────────────────────────────────────
+
+const ACCOUNT_TYPES = [
+  { value: 'meal_voucher', label: 'Vale Refeição',    icon: Utensils },
+  { value: 'credit',       label: 'Cartão de Crédito', icon: CreditCard },
+  { value: 'debit',        label: 'Cartão de Débito',  icon: CreditCard },
+  { value: 'checking',     label: 'Conta Corrente',    icon: Building2 },
+  { value: 'cash',         label: 'Dinheiro',          icon: Banknote },
+] as const
+
+const TYPE_LABELS: Record<string, string> = {
+  meal_voucher: 'Vale Refeição',
+  credit:  'Crédito',
+  debit:   'Débito',
+  cash:    'Dinheiro',
+  checking:'Conta Corrente',
+}
+
+const TYPE_SHORT: Record<Account['type'], string> = {
+  credit:       'Crédito',
+  debit:        'Débito',
+  checking:     'Conta',
+  meal_voucher: '',
+  cash:         'Dinheiro',
+}
+
+const BANK_DEFAULT_TYPE: Partial<Record<string, Account['type']>> = {
+  nubank: 'credit', inter: 'credit', c6bank: 'credit',
+  neon: 'debit', picpay: 'debit', will: 'debit', mercadopago: 'debit', pagbank: 'debit',
+  bradesco: 'checking', itau: 'checking', santander: 'checking', caixa: 'checking', bb: 'checking',
+  btg: 'checking', xp: 'checking', rico: 'checking',
+  sicoob: 'checking', sicredi: 'checking',
+  alelo: 'meal_voucher', vr: 'meal_voucher', ticket: 'meal_voucher',
+  sodexo: 'meal_voucher', flash: 'meal_voucher',
+}
+
+const COLORS = ['#FF6B35', '#16A34A', '#2563EB', '#DB2777', '#D97706', '#7C3AED', '#0891B2', '#DC2626']
+
+function getAutoName(bankId: string, type: Account['type']): string {
+  const bank = getBankById(bankId)
+  if (!bank) return ''
+  const suffix = TYPE_SHORT[type]
+  return suffix ? `${bank.name} ${suffix}` : bank.name
+}
+
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9CA3AF', margin: '0 0 8px 0' }}>
+      {text}
+    </p>
+  )
+}
+
+// ─── AccountForm ────────────────────────────────────────────────────────────────
+
+type FormState = { name: string; type: Account['type']; color: string; balance: string; bank: string }
+
+interface AccountFormProps {
+  form: FormState
+  setForm: React.Dispatch<React.SetStateAction<FormState>>
+  bankCategory: BankCategory | 'all'
+  setBankCategory: React.Dispatch<React.SetStateAction<BankCategory | 'all'>>
+  filteredBanks: ReturnType<typeof getBanksByCategory>
+  onSubmit: (e: React.FormEvent) => void
+  onCancel: () => void
+  submitLabel: string
+  saving: boolean
+  onBankSelect: (bankId: string) => void
+  onTypeChange: (type: Account['type']) => void
+}
+
+function AccountForm({
+  form, setForm, bankCategory, setBankCategory, filteredBanks,
+  onSubmit, onCancel, submitLabel, saving, onBankSelect, onTypeChange,
+}: AccountFormProps) {
+  const previewBalance = parseFloat(form.balance || '0')
+  const previewName = form.name || 'Nome da conta'
+
+  return (
+    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{
+        background: '#F7F7F8', borderRadius: 14, padding: '14px 16px',
+        display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #EBEBEB',
+      }}>
+        {form.bank ? (
+          <BankLogo bankId={form.bank} size={44} />
+        ) : (
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: form.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Wallet size={20} color={form.color} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: form.name ? '#0A0A0A' : '#B0B0B0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {previewName}
+          </p>
+          <p style={{ fontSize: 12, color: '#9CA3AF', margin: '2px 0 0' }}>
+            {TYPE_LABELS[form.type]}
+          </p>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <p style={{ fontSize: 10, color: '#B0B0B0', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 2px' }}>Saldo inicial</p>
+          <p style={{ fontSize: 15, fontWeight: 700, color: previewBalance >= 0 ? '#16A34A' : '#DC2626', margin: 0 }}>
+            {formatCurrency(previewBalance)}
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <SectionLabel text="Banco / Instituição" />
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 10 } as React.CSSProperties}>
+          {([['all', 'Todos'], ...Object.entries(BANK_CATEGORIES)] as [string, string][]).map(([key, label]) => {
+            const active = bankCategory === key
+            return (
+              <button key={key} type="button" onClick={() => setBankCategory(key as BankCategory | 'all')}
+                style={{
+                  flexShrink: 0, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap', cursor: 'pointer',
+                  border: active ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+                  background: active ? '#FFF0EB' : 'transparent',
+                  color: active ? '#C94A1A' : '#6B6B6B',
+                  fontSize: 12, fontWeight: active ? 600 : 400,
+                }}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' } as React.CSSProperties}>
+          <button type="button" onClick={() => setForm(f => ({ ...f, bank: '', name: '' }))}
+            style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: 6, padding: '10px 14px', borderRadius: 8, minWidth: 64, cursor: 'pointer',
+              border: !form.bank ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+              background: !form.bank ? '#FFF0EB' : 'transparent',
+            }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Wallet size={15} color="#9CA3AF" />
+            </div>
+            <span style={{ fontSize: 11, color: !form.bank ? '#C94A1A' : '#6B6B6B', whiteSpace: 'nowrap', fontWeight: !form.bank ? 500 : 400 }}>
+              Outro
+            </span>
+          </button>
+          {filteredBanks.map(bank => {
+            const selected = form.bank === bank.id
+            return (
+              <button key={bank.id} type="button" onClick={() => onBankSelect(bank.id)}
+                style={{
+                  flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 6, padding: '10px 14px', borderRadius: 8, minWidth: 64, cursor: 'pointer',
+                  border: selected ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+                  background: selected ? '#FFF0EB' : 'transparent',
+                }}>
+                <BankLogo bankId={bank.id} size={32} />
+                <span style={{ fontSize: 11, color: selected ? '#C94A1A' : '#6B6B6B', whiteSpace: 'nowrap', fontWeight: selected ? 500 : 400 }}>
+                  {bank.name}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div>
+          <SectionLabel text="Nome da conta" />
+          <input
+            required
+            placeholder="Ex: Nubank Crédito..."
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            style={{
+              width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
+              border: '1px solid #E5E5E5', fontSize: 13, color: '#0A0A0A',
+              outline: 'none', boxSizing: 'border-box', background: '#fff',
+            }}
+          />
+        </div>
+        <div>
+          <SectionLabel text="Saldo inicial (R$)" />
+          <input
+            type="number" step="0.01" placeholder="0,00"
+            value={form.balance}
+            onChange={e => setForm(f => ({ ...f, balance: e.target.value }))}
+            style={{
+              width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
+              border: '1px solid #E5E5E5', fontSize: 13, color: '#0A0A0A',
+              outline: 'none', boxSizing: 'border-box', background: '#fff',
+            }}
+          />
+        </div>
+      </div>
+
+      <div>
+        <SectionLabel text="Tipo" />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {ACCOUNT_TYPES.map(({ value, label }) => {
+            const selected = form.type === value
+            return (
+              <button key={value} type="button" onClick={() => onTypeChange(value as Account['type'])}
+                style={{
+                  padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
+                  border: selected ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+                  background: selected ? '#FFF0EB' : 'transparent',
+                  color: selected ? '#C94A1A' : '#6B6B6B',
+                  fontWeight: selected ? 500 : 400,
+                }}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, paddingTop: 4 }}>
+        <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">Cancelar</Button>
+        <Button type="submit" loading={saving} loadingText="Salvando..." className="flex-1">{submitLabel}</Button>
+      </div>
+    </form>
+  )
+}
+
+// ─── Página principal ───────────────────────────────────────────────────────────
+
+const EMPTY_FORM: FormState = { name: '', type: 'debit', color: COLORS[0], balance: '', bank: '' }
+
+export default function AccountsPage() {
+  const { accounts, loading, refetch } = useAccounts()
+  const { items: recurring } = useRecurring()
+  const { showToast } = useToast()
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [expandedAccount, setExpandedAccount] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [bankCategory, setBankCategory] = useState<BankCategory | 'all'>('all')
+  const [form, setForm] = useState<FormState>(EMPTY_FORM)
+
+  const fetchTransactions = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false })
+    setTransactions((data as Transaction[]) || [])
+  }, [])
+
+  useEffect(() => { fetchTransactions() }, [fetchTransactions])
+
+  useEffect(() => {
+    const handler = () => fetchTransactions()
+    window.addEventListener('fintrack:transactions-updated', handler)
+    return () => window.removeEventListener('fintrack:transactions-updated', handler)
+  }, [fetchTransactions])
+
+  const getEffectiveBalance = useCallback((accountId: string, initialBalance: number) => {
+    const thisMonth = new Date().toISOString().slice(0, 7)
+
+    // Transações diretamente vinculadas à conta
+    const linked = transactions.filter(t => t.account_id === accountId)
+    let txAdjust = linked.reduce((s, t) => s + t.value, 0)
+
+    // Recorrentes ativos vinculados à conta
+    const accountRecurring = recurring.filter(r => r.active && r.account_id === accountId)
+
+    let recAdjust = 0
+    for (const r of accountRecurring) {
+      // Procura transação este mês que corresponde a este recorrente
+      // (independente do account_id — cobre falha do processor)
+      const matchTx = transactions.find(t =>
+        t.date.startsWith(thisMonth) &&
+        t.value === r.value &&
+        t.description === r.description
+      )
+      if (matchTx) {
+        // Transação existe — se não está em linked (account_id errado), inclui aqui
+        if (matchTx.account_id !== accountId) txAdjust += matchTx.value
+      } else {
+        // Sem transação este mês — inclui o recorrente no saldo projetado
+        recAdjust += r.value
+      }
+    }
+
+    return initialBalance - txAdjust - recAdjust
+  }, [transactions, recurring])
+
+  // Recorrentes por conta
+  const getAccountRecurring = useCallback((accountId: string) => {
+    return recurring.filter(r => r.active && r.account_id === accountId)
+  }, [recurring])
+
+  const getMonthlyRecurring = (items: typeof recurring) => {
+    const expense = items.filter(r => r.value > 0).reduce((s, r) => {
+      if (r.frequency === 'monthly') return s + r.value
+      if (r.frequency === 'weekly')  return s + r.value * 4.33
+      if (r.frequency === 'yearly')  return s + r.value / 12
+      return s
+    }, 0)
+    const income = items.filter(r => r.value < 0).reduce((s, r) => {
+      const v = Math.abs(r.value)
+      if (r.frequency === 'monthly') return s + v
+      if (r.frequency === 'weekly')  return s + v * 4.33
+      if (r.frequency === 'yearly')  return s + v / 12
+      return s
+    }, 0)
+    return { expense, income }
+  }
+
+  const resetForm = () => { setForm(EMPTY_FORM); setBankCategory('all') }
+
+  const handleBankSelect = (bankId: string) => {
+    const bank = getBankById(bankId)
+    const newType = BANK_DEFAULT_TYPE[bankId] ?? form.type
+    const prevAutoName = getAutoName(form.bank, form.type)
+    const newAutoName = getAutoName(bankId, newType)
+    setForm(f => ({
+      ...f,
+      bank: bankId,
+      color: bank ? bank.bg : f.color,
+      type: newType,
+      name: (f.name === '' || f.name === prevAutoName) ? newAutoName : f.name,
+    }))
+  }
+
+  const handleTypeChange = (type: Account['type']) => {
+    const prevAutoName = getAutoName(form.bank, form.type)
+    const newAutoName = getAutoName(form.bank, type)
+    setForm(f => ({
+      ...f,
+      type,
+      name: (f.name === '' || f.name === prevAutoName) ? newAutoName : f.name,
+    }))
+  }
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    const result = await createAccount({
+      name: form.name, type: form.type, color: form.color,
+      balance: parseFloat(form.balance || '0'), bank: form.bank || null,
+    })
+    setSaving(false)
+    if (result.error) showToast(result.error, 'error')
+    else {
+      if (result.id) setBankStorage(result.id, form.bank || null)
+      showToast('Conta criada!'); setModalOpen(false); resetForm(); refetch()
+    }
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingAccount) return
+    setSaving(true)
+    const result = await updateAccount(editingAccount.id, {
+      name: form.name, color: form.color,
+      balance: parseFloat(form.balance || '0'), bank: form.bank || null,
+    })
+    setSaving(false)
+    if (result.error) showToast(result.error, 'error')
+    else {
+      setBankStorage(editingAccount.id, form.bank || null)
+      showToast('Conta atualizada!'); setEditingAccount(null); refetch()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingId) return
+    setDeleting(true)
+    const result = await deleteAccount(deletingId)
+    setDeleting(false); setDeletingId(null)
+    if (result.error) showToast(result.error, 'error')
+    else { showToast('Conta removida'); refetch() }
+  }
+
+  const openEdit = (account: Account) => {
+    setEditingAccount(account)
+    setBankCategory('all')
+    setForm({ name: account.name, type: account.type, color: account.color, balance: account.balance.toString(), bank: account.bank || '' })
+  }
+
+  const filteredBanks = useMemo(() =>
+    bankCategory === 'all' ? BANKS : getBanksByCategory(bankCategory),
+  [bankCategory])
+
+  const sharedFormProps = {
+    form, setForm, bankCategory, setBankCategory, filteredBanks,
+    saving, onBankSelect: handleBankSelect, onTypeChange: handleTypeChange,
+  }
+
+  // Totais gerais
+  const totalInitial = accounts.reduce((s, a) => s + a.balance, 0)
+  const totalEffective = accounts.reduce((s, a) => s + getEffectiveBalance(a.id, a.balance), 0)
+
+  return (
+    <main className="p-8 min-h-screen max-w-3xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Contas</h1>
+          <p className="text-sm text-text-secondary mt-0.5">Gerencie seus cartões e contas</p>
+        </div>
+        <Button onClick={() => { resetForm(); setModalOpen(true) }}>
+          <Plus size={16} /> Nova conta
+        </Button>
+      </div>
+
+      {/* Resumo geral */}
+      {accounts.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <p className="text-xs text-text-tertiary mb-1">Saldo inicial total</p>
+            <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(totalInitial)}</p>
+          </div>
+          <div className="rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+            style={{ backgroundColor: totalEffective >= 0 ? '#F0FDF4' : '#FEF2F2' }}>
+            <p className="text-xs text-text-tertiary mb-1">Saldo projetado total</p>
+            <p className="text-lg font-bold tabular-nums" style={{ color: totalEffective >= 0 ? '#16A34A' : '#DC2626' }}>
+              {formatCurrency(totalEffective)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white rounded-xl border border-border p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl skeleton" />
+              <div className="flex-1">
+                <div className="h-3.5 w-28 skeleton mb-2" />
+                <div className="h-2.5 w-20 skeleton" />
+              </div>
+              <div className="h-5 w-20 skeleton" />
+            </div>
+          ))}
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="bg-white rounded-xl border border-border py-16 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <Wallet size={32} className="mx-auto mb-3 text-text-tertiary" />
+          <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma conta cadastrada</p>
+          <p className="text-xs text-text-tertiary mb-4">Adicione seus cartões e contas bancárias</p>
+          <Button size="sm" onClick={() => { resetForm(); setModalOpen(true) }}>
+            <Plus size={14} /> Adicionar conta
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {accounts.map(account => {
+            const TypeIcon = ACCOUNT_TYPES.find(t => t.value === account.type)?.icon || Wallet
+            const effectiveBalance = getEffectiveBalance(account.id, account.balance)
+            const accountTxs = transactions.filter(t => t.account_id === account.id)
+            const totalIncome = accountTxs.filter(t => t.value < 0).reduce((s, t) => s + Math.abs(t.value), 0)
+            const totalExpense = accountTxs.filter(t => t.value > 0).reduce((s, t) => s + t.value, 0)
+            const accountRecurring = getAccountRecurring(account.id)
+            const { expense: recExpense, income: recIncome } = getMonthlyRecurring(accountRecurring)
+            const isExpanded = expandedAccount === account.id
+
+            return (
+              <div key={account.id} className="bg-white rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+                {/* Cabeçalho da conta */}
+                <div
+                  className="p-4 flex items-center gap-4 cursor-pointer hover:bg-[#FAFAFA] transition-colors"
+                  onClick={() => setExpandedAccount(isExpanded ? null : account.id)}
+                >
+                  {account.bank ? (
+                    <BankLogo bankId={account.bank} size={40} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: account.color + '20' }}>
+                      <TypeIcon size={18} style={{ color: account.color }} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-text-primary">{account.name}</p>
+                    <p className="text-xs text-text-tertiary">{TYPE_LABELS[account.type]}</p>
+                  </div>
+
+                  {/* Saldo atual */}
+                  <div className="text-right mr-2">
+                    <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Saldo projetado</p>
+                    <p className="text-base font-bold tabular-nums" style={{ color: effectiveBalance >= 0 ? '#16A34A' : '#DC2626' }}>
+                      {formatCurrency(effectiveBalance)}
+                    </p>
+                    <p className="text-[10px] text-text-tertiary">
+                      inicial: {formatCurrency(account.balance)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button onClick={e => { e.stopPropagation(); openEdit(account) }}
+                      className="text-text-tertiary hover:text-text-primary transition-colors p-1">
+                      <Pencil size={14} />
+                    </button>
+                    <button onClick={e => { e.stopPropagation(); setDeletingId(account.id) }}
+                      className="text-text-tertiary hover:text-negative transition-colors p-1">
+                      <Trash2 size={14} />
+                    </button>
+                    <div className="text-text-tertiary p-1">
+                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Painel expandido */}
+                {isExpanded && (
+                  <div className="border-t border-border">
+                    {/* Mini resumo */}
+                    <div className="grid grid-cols-3 gap-0 border-b border-border">
+                      <div className="px-4 py-3 border-r border-border">
+                        <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Receitas</p>
+                        <p className="text-sm font-semibold text-green-600 tabular-nums">+{formatCurrency(totalIncome)}</p>
+                      </div>
+                      <div className="px-4 py-3 border-r border-border">
+                        <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Despesas</p>
+                        <p className="text-sm font-semibold text-red-600 tabular-nums">-{formatCurrency(totalExpense)}</p>
+                      </div>
+                      <div className="px-4 py-3">
+                        <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Transações</p>
+                        <p className="text-sm font-semibold text-text-primary tabular-nums">{accountTxs.length}</p>
+                      </div>
+                    </div>
+
+                    {/* Recorrentes vinculadas */}
+                    {accountRecurring.length > 0 && (
+                      <div className="px-4 py-3 border-b border-border bg-[#FAFAFA]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <RefreshCw size={11} className="text-text-tertiary" />
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">
+                            Recorrentes vinculadas
+                          </p>
+                          <span className="ml-auto text-[10px] text-text-tertiary">
+                            {recIncome > 0 && <span className="text-green-600">+{formatCurrency(recIncome)}/mês</span>}
+                            {recIncome > 0 && recExpense > 0 && ' · '}
+                            {recExpense > 0 && <span className="text-red-600">-{formatCurrency(recExpense)}/mês</span>}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          {accountRecurring.map(r => (
+                            <div key={r.id} className="flex items-center gap-2">
+                              <span className="text-xs text-text-secondary flex-1 truncate">{r.description}</span>
+                              <span className="text-xs text-text-tertiary capitalize">
+                                {r.frequency === 'monthly' ? 'Mensal' : r.frequency === 'weekly' ? 'Semanal' : 'Anual'}
+                              </span>
+                              <span className="text-xs font-semibold tabular-nums" style={{ color: r.value < 0 ? '#16A34A' : '#DC2626' }}>
+                                {r.value < 0 ? '+' : '-'}{formatCurrency(Math.abs(r.value))}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Movimentos */}
+                    {accountTxs.length === 0 ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-xs text-text-tertiary">Nenhuma transação vinculada a esta conta</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="px-4 py-2 border-b border-border bg-[#FAFAFA]">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Movimentos</p>
+                        </div>
+                        <div className="divide-y divide-border-light max-h-64 overflow-y-auto">
+                          {accountTxs.slice(0, 20).map(tx => (
+                            <div key={tx.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#FAFAFA] transition-colors">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-text-primary truncate">{tx.description}</p>
+                                <p className="text-[10px] text-text-tertiary mt-0.5">{formatDate(tx.date)}</p>
+                              </div>
+                              <CategoryBadge category={tx.category as CategoryKey} />
+                              <span className="text-xs font-semibold tabular-nums ml-1" style={{ color: tx.value < 0 ? '#16A34A' : '#DC2626' }}>
+                                {tx.value < 0 ? '+' : '-'}{formatCurrency(Math.abs(tx.value))}
+                              </span>
+                            </div>
+                          ))}
+                          {accountTxs.length > 20 && (
+                            <div className="px-4 py-2 text-center">
+                              <p className="text-xs text-text-tertiary">+{accountTxs.length - 20} transações anteriores</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); resetForm() }} title="Nova Conta">
+        <AccountForm {...sharedFormProps} onSubmit={handleCreate} onCancel={() => { setModalOpen(false); resetForm() }} submitLabel="Criar conta" />
+      </Modal>
+
+      <Modal isOpen={!!editingAccount} onClose={() => setEditingAccount(null)} title="Editar Conta">
+        <AccountForm {...sharedFormProps} onSubmit={handleUpdate} onCancel={() => setEditingAccount(null)} submitLabel="Salvar" />
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deletingId}
+        title="Excluir conta"
+        description="Tem certeza? As transações vinculadas a esta conta perderão o vínculo, mas não serão excluídas."
+        confirmLabel="Excluir conta"
+        onConfirm={handleDelete}
+        onCancel={() => setDeletingId(null)}
+        loading={deleting}
+      />
+    </main>
+  )
+}

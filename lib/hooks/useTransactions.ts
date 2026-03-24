@@ -33,6 +33,13 @@ export function useTransactions(month?: number, year?: number) {
 
   useEffect(() => { fetchTransactions() }, [fetchTransactions])
 
+  // Refaz fetch quando o RecurringProcessor criar novas transações
+  useEffect(() => {
+    const handler = () => fetchTransactions()
+    window.addEventListener('fintrack:transactions-updated', handler)
+    return () => window.removeEventListener('fintrack:transactions-updated', handler)
+  }, [fetchTransactions])
+
   const addTransaction = async (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
