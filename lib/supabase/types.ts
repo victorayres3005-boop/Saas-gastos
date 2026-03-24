@@ -123,6 +123,7 @@ export type Database = {
           target_value: number
           current_value: number
           deadline: string | null
+          start_date: string | null
           color: string
           investment_type: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
           created_at: string
@@ -134,6 +135,7 @@ export type Database = {
           target_value: number
           current_value?: number
           deadline?: string | null
+          start_date?: string | null
           color?: string
           investment_type?: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
           created_at?: string
@@ -145,6 +147,7 @@ export type Database = {
           target_value?: number
           current_value?: number
           deadline?: string | null
+          start_date?: string | null
           color?: string
           investment_type?: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
           created_at?: string

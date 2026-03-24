@@ -6,7 +6,8 @@ export async function addGoal(data: {
   title: string
   target_value: number
   current_value: number
-  deadline?: string
+  start_date?: string | null
+  deadline?: string | null
   color: string
   investment_type?: 'none' | 'cdb_100' | 'cdb_110' | 'selic' | 'poupanca'
 }) {

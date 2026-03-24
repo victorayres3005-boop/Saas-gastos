@@ -36,7 +36,8 @@ export default function GoalsPage() {
   const [depositValue, setDepositValue] = useState('')
   const [depositAccountId, setDepositAccountId] = useState('')
   const [form, setForm] = useState({
-    title: '', target_value: '', current_value: '', deadline: '',
+    title: '', target_value: '', current_value: '',
+    start_date: '', deadline: '',
     color: GOAL_COLORS[0], investment_type: 'none' as InvestmentType,
   })
   const [saving, setSaving] = useState(false)
@@ -50,7 +51,8 @@ export default function GoalsPage() {
       title: form.title,
       target_value: parseFloat(form.target_value),
       current_value: parseFloat(form.current_value || '0'),
-      deadline: form.deadline || undefined,
+      start_date: form.start_date || null,
+      deadline: form.deadline || null,
       color: form.color,
       investment_type: form.investment_type,
     })
@@ -60,7 +62,7 @@ export default function GoalsPage() {
       showToast('Meta criada!')
       setModalOpen(false)
       refetch()
-      setForm({ title: '', target_value: '', current_value: '', deadline: '', color: GOAL_COLORS[0], investment_type: 'none' })
+      setForm({ title: '', target_value: '', current_value: '', start_date: '', deadline: '', color: GOAL_COLORS[0], investment_type: 'none' })
     }
   }
 
@@ -214,9 +216,17 @@ export default function GoalsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-text-primary">{goal.title}</p>
-                      {goal.deadline && (
-                        <p className="text-xs text-text-tertiary">
-                          até {new Date(goal.deadline + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+                      {(goal.start_date || goal.deadline) && (
+                        <p className="text-xs text-text-tertiary mt-0.5">
+                          {goal.start_date
+                            ? new Date(goal.start_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : '—'
+                          }
+                          {' → '}
+                          {goal.deadline
+                            ? new Date(goal.deadline + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : 'sem prazo'
+                          }
                         </p>
                       )}
                     </div>
@@ -303,8 +313,34 @@ export default function GoalsPage() {
             value={form.target_value} onChange={e => setForm(f => ({ ...f, target_value: e.target.value }))} required />
           <Input label="Valor atual (R$)" type="number" step="0.01" min="0" placeholder="0,00"
             value={form.current_value} onChange={e => setForm(f => ({ ...f, current_value: e.target.value }))} />
-          <Input label="Prazo (opcional)" type="month" value={form.deadline}
-            onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+
+          {/* Período — ambos opcionais */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-text-primary">Período</label>
+              <span className="text-xs text-text-tertiary">Ambos opcionais</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-text-tertiary">Data de início</label>
+                <input
+                  type="date"
+                  value={form.start_date}
+                  onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
+                  className="h-9 px-3 border border-border rounded-lg text-sm text-text-primary bg-white outline-none focus:border-accent transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-text-tertiary">Prazo final</label>
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
+                  className="h-9 px-3 border border-border rounded-lg text-sm text-text-primary bg-white outline-none focus:border-accent transition-all"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Tipo de investimento */}
           <div>
