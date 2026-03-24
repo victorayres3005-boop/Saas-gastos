@@ -22,9 +22,33 @@ export async function updateAvatar(avatar_url: string) {
   return { success: true }
 }
 
-export async function updatePassword(password: string) {
+// Envia e-mail de verificação para o novo endereço.
+// O perfil só é atualizado depois que o usuário confirmar no link recebido.
+export async function updateEmail(email: string) {
   const supabase = createServerSupabaseClient()
-  const { error } = await supabase.auth.updateUser({ password })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+  if (email === user.email) return { error: 'Este já é o seu e-mail atual' }
+
+  const { error } = await supabase.auth.updateUser({ email })
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+// Verifica a senha atual antes de permitir a troca
+export async function updatePassword(currentPassword: string, newPassword: string) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) return { error: 'Não autenticado' }
+
+  // Valida a senha atual
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  })
+  if (signInError) return { error: 'Senha atual incorreta' }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
   if (error) return { error: error.message }
   return { success: true }
 }
