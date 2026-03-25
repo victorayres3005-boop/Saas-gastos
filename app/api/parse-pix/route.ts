@@ -13,12 +13,12 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // pdf-parse is Node.js native — no browser APIs needed
+    // pdf-parse v1.1.1 — Node.js native, no browser APIs
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
+    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string; numpages: number }>
     const data = await pdfParse(buffer)
 
-    return NextResponse.json({ text: data.text })
+    return NextResponse.json({ text: data.text, pages: data.numpages })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: msg }, { status: 500 })
