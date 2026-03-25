@@ -1,26 +1,32 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, ArrowLeftRight, PieChart, LogOut, Target, RefreshCw, Settings, Wallet } from 'lucide-react'
+import { useState } from 'react'
+import {
+  LayoutDashboard, ArrowLeftRight, PieChart, LogOut, Target,
+  RefreshCw, Settings, Wallet, BarChart2, Bell, X, Sun, Moon, Monitor,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { useBudgetAlerts } from '@/lib/hooks/useBudgetAlerts'
 import { Avatar } from '../ui/Avatar'
+import { useTheme } from '../providers/ThemeProvider'
 
 const navItems = [
-  { href: '/dashboard',    label: 'Dashboard',     icon: LayoutDashboard },
-  { href: '/accounts',     label: 'Contas',         icon: Wallet },
-  { href: '/transactions', label: 'Transações',     icon: ArrowLeftRight },
-  { href: '/budget',       label: 'Orçamento',      icon: PieChart },
-  { href: '/recurring',    label: 'Recorrentes',    icon: RefreshCw },
-  { href: '/goals',        label: 'Metas',          icon: Target },
-  { href: '/settings',     label: 'Configurações',  icon: Settings },
+  { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
+  { href: '/accounts',     label: 'Contas',            icon: Wallet },
+  { href: '/transactions', label: 'Transações',        icon: ArrowLeftRight },
+  { href: '/budget',       label: 'Orçamento',         icon: PieChart },
+  { href: '/recurring',    label: 'Recorrentes',       icon: RefreshCw },
+  { href: '/goals',        label: 'Metas',             icon: Target },
+  { href: '/analysis',     label: 'Análise',           icon: BarChart2 },
+  { href: '/settings',     label: 'Configurações',     icon: Settings },
 ]
 
 const mobileNavItems = [
   { href: '/dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
   { href: '/transactions', label: 'Transações', icon: ArrowLeftRight },
-  { href: '/accounts',     label: 'Contas',     icon: Wallet },
+  { href: '/analysis',     label: 'Análise',    icon: BarChart2 },
   { href: '/goals',        label: 'Metas',      icon: Target },
   { href: '/settings',     label: 'Config.',    icon: Settings },
 ]
@@ -29,7 +35,12 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { profile } = useProfile()
-  const budgetAlerts = useBudgetAlerts()
+  const alerts = useBudgetAlerts()
+  const { theme, setTheme } = useTheme()
+  const [showAlerts, setShowAlerts] = useState(false)
+
+  const alertCount = alerts.length
+  const dangerCount = alerts.filter(a => a.severity === 'danger').length
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -39,14 +50,59 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 h-full w-[232px] bg-white border-r border-border flex flex-col z-30 max-md:hidden">
+      <aside className="fixed left-0 top-0 h-full w-[232px] bg-bg-surface border-r border-border flex flex-col z-30 max-md:hidden">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-border">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-              <span className="text-white font-bold text-sm">F</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
+                <span className="text-white font-bold text-sm">F</span>
+              </div>
+              <span className="font-bold text-base text-text-primary">FinanceTrack</span>
             </div>
-            <span className="font-bold text-base text-text-primary">FinanceTrack</span>
+            {/* Notificações */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAlerts(v => !v)}
+                className="relative w-7 h-7 flex items-center justify-center rounded-lg hover:bg-bg-page transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <Bell size={15} strokeWidth={1.5} />
+                {alertCount > 0 && (
+                  <span className={`absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full text-white text-[9px] font-bold flex items-center justify-center px-0.5 ${dangerCount > 0 ? 'bg-negative' : 'bg-warning'}`}>
+                    {alertCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Painel de alertas */}
+              {showAlerts && (
+                <div className="absolute top-8 left-0 w-72 bg-bg-surface border border-border rounded-xl shadow-lg z-50 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-text-primary">Notificações</p>
+                    <button onClick={() => setShowAlerts(false)} className="text-text-tertiary hover:text-text-primary">
+                      <X size={13} />
+                    </button>
+                  </div>
+                  {alerts.length === 0 ? (
+                    <p className="text-xs text-text-tertiary py-3 text-center">Nenhum alerta no momento</p>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {alerts.map(a => (
+                        <div key={a.id} className={`p-2.5 rounded-lg border ${a.severity === 'danger' ? 'bg-negative-light border-negative/20' : 'bg-warning-light border-warning/20'}`}>
+                          <p className={`text-xs font-semibold mb-0.5 ${a.severity === 'danger' ? 'text-negative' : 'text-warning'}`}>{a.title}</p>
+                          <p className="text-xs text-text-secondary">{a.message}</p>
+                          {a.pct !== undefined && (
+                            <div className="mt-1.5 w-full h-1 bg-border rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${a.severity === 'danger' ? 'bg-negative' : 'bg-warning'}`} style={{ width: `${Math.min(a.pct, 100)}%` }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -68,15 +124,42 @@ export function Sidebar() {
               >
                 <Icon size={16} strokeWidth={1.5} className={active ? 'text-accent' : ''} />
                 <span className="flex-1">{label}</span>
-                {isBudget && budgetAlerts > 0 && (
-                  <span className="min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
-                    {budgetAlerts}
+                {isBudget && alertCount > 0 && (
+                  <span className={`min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 ${dangerCount > 0 ? 'bg-negative' : 'bg-warning'}`}>
+                    {alertCount}
                   </span>
                 )}
               </Link>
             )
           })}
         </nav>
+
+        {/* Tema toggle */}
+        <div className="px-4 py-3 border-t border-border">
+          <div className="flex items-center gap-1 bg-bg-page rounded-lg p-1">
+            <button
+              onClick={() => setTheme('light')}
+              title="Modo claro"
+              className={`flex-1 flex items-center justify-center py-1 rounded-md transition-colors ${theme === 'light' ? 'bg-bg-surface shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-primary'}`}
+            >
+              <Sun size={13} />
+            </button>
+            <button
+              onClick={() => setTheme('system')}
+              title="Sistema"
+              className={`flex-1 flex items-center justify-center py-1 rounded-md transition-colors ${theme === 'system' ? 'bg-bg-surface shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-primary'}`}
+            >
+              <Monitor size={13} />
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              title="Modo escuro"
+              className={`flex-1 flex items-center justify-center py-1 rounded-md transition-colors ${theme === 'dark' ? 'bg-bg-surface shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-primary'}`}
+            >
+              <Moon size={13} />
+            </button>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="px-3 py-4 border-t border-border">
@@ -112,7 +195,7 @@ export function Sidebar() {
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30 flex md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 bg-bg-surface border-t border-border z-30 flex md:hidden">
         {mobileNavItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
