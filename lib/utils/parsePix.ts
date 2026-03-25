@@ -109,16 +109,19 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
   const DATE_FULL = /(\d{2})\/(\d{2})\/(\d{4})/
   const DATE_SHORT = /(\d{2})\/(\d{2})(?!\/\d)/
 
-  const SKIP_LINE = /^(data\b|descri[cç]|hist[oó]rico\b|valor\b|saldo\b|d[eé]bito\b|cr[eé]dito\b|lan[cç]amento\b|movimenta|per[ií]odo\b|extrato\b|banco\b|ag[eê]ncia\b|conta\b|nome\b|cpf\b|cnpj\b)/i
+  const SKIP_LINE = /^(data\b|descri[cç]|hist[oó]rico\b|valor\b|saldo\b|d[eé]bito\b|cr[eé]dito\b|lan[cç]amento\b|movimenta|per[ií]odo\b|extrato\b|banco\b|ag[eê]ncia\b|conta\b|nome\b|cpf\b|cnpj\b|total\b|totaliz|resumo\b|saldo\s+anterior|saldo\s+final|saldo\s+do\s+dia|abertura\b|encerramento\b|n[uú]mero\b|endere[cç]|titular\b|emiss[aã]o\b|vencimento\b|fatura\b)/i
+
+  function parseVal(raw: string): number {
+    const clean = raw.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+    return Math.abs(parseFloat(clean))
+  }
 
   function addTx(year: string, mm: string, dd: string, rawDesc: string, rawVal: string) {
     const date = `${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
 
-    // Parse value — handle "1.234,56" and "1234,56" and "-150,00"
     const isNeg = rawVal.trim().startsWith('-')
-    const clean = rawVal.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
-    const absVal = Math.abs(parseFloat(clean))
-    if (isNaN(absVal) || absVal === 0 || absVal > 999999) return
+    const absVal = parseVal(rawVal)
+    if (isNaN(absVal) || absVal === 0 || absVal > 500000) return
 
     const value = isNeg ? -absVal : absVal
     const description = rawDesc
@@ -126,6 +129,8 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
       .replace(/\s{2,}/g, ' ')
       .replace(/[|\\]/g, '')
       .replace(/^\s*[-–]+\s*/, '')
+      // Remove trailing fragments that look like account/agency numbers
+      .replace(/\s+\d{4,}[-/]?\d*\s*$/, '')
       .trim()
     if (description.length < 2) return
 
@@ -133,6 +138,20 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
     if (seen.has(key)) return
     seen.add(key)
     results.push({ date, description, value, isIncome: value < 0, selected: true })
+  }
+
+  // Pick the transaction value from a pair [v0, v1] where one is likely the saldo
+  function pickTxFromPair(v0str: string, v1str: string): string | null {
+    const v0 = parseVal(v0str)
+    const v1 = parseVal(v1str)
+    if (isNaN(v0) || isNaN(v1)) return v0str
+    const ratio = Math.max(v0, v1) / (Math.min(v0, v1) || 0.01)
+    // Both values similar magnitude → likely two consecutive balances, skip
+    if (ratio < 1.8 && v0 > 300 && v1 > 300) return null
+    // First is much larger than second → first is the balance, second is transaction
+    if (v0 > v1 * 3) return v1str
+    // Otherwise first is the transaction (most common: [tx, saldo])
+    return v0str
   }
 
   // ── Strategy 1: Line-by-line — handles most bank statement formats ──────────
@@ -165,30 +184,36 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
       addTx(year, mm, dd, desc || 'Transação', vals[0])
 
     } else if (vals.length === 2) {
-      // Two values: [transaction_value, saldo] — take the FIRST
+      // Two values: usually [transaction, saldo] but sometimes [saldo_before, saldo_after]
+      const txVal = pickTxFromPair(vals[0], vals[1])
+      if (!txVal) continue  // both values are likely balances — skip line
       const desc = rest.replace(vals[0], '').replace(vals[1], '').trim()
-      addTx(year, mm, dd, desc || 'Transação', vals[0])
+      addTx(year, mm, dd, desc || 'Transação', txVal)
 
     } else if (vals.length === 3) {
       // Three values: possibly [debit, credit, saldo]
-      const debit  = parseFloat(vals[0].replace(/\./g, '').replace(',', '.'))
-      const credit = parseFloat(vals[1].replace(/\./g, '').replace(',', '.'))
+      const debit  = parseVal(vals[0])
+      const credit = parseVal(vals[1])
       let txVal: string
       if (debit > 0 && credit === 0) {
-        txVal = vals[0]          // expense
+        txVal = vals[0]           // expense
       } else if (credit > 0 && debit === 0) {
-        txVal = `-${vals[1]}`    // income
+        txVal = `-${vals[1]}`     // income
       } else {
-        txVal = vals[0]
+        // Both columns populated → use pickTxFromPair on first two
+        txVal = pickTxFromPair(vals[0], vals[1]) ?? vals[0]
       }
       const desc = rest
         .replace(vals[0], '').replace(vals[1], '').replace(vals[2], '').trim()
       addTx(year, mm, dd, desc || 'Transação', txVal)
 
     } else {
-      // 4+ values: take first (most likely the transaction amount)
-      const desc = rest.replace(vals[0], '').trim()
-      addTx(year, mm, dd, desc || 'Transação', vals[0])
+      // 4+ values: pick the smallest non-zero value (most likely the transaction, not a running balance)
+      const numVals = vals.map(v => ({ raw: v, n: parseVal(v) })).filter(v => v.n > 0)
+      const smallest = numVals.sort((a, b) => a.n - b.n)[0]
+      if (!smallest) continue
+      const desc = rest.replace(smallest.raw, '').trim()
+      addTx(year, mm, dd, desc || 'Transação', smallest.raw)
     }
   }
 
@@ -246,6 +271,18 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
         const between = text.slice(dateEnd, nearby[0].index!).trim()
         addTx(d[3], d[2], d[1], between || 'Transação', nearby[0][0])
       }
+    }
+  }
+
+  // ── Post-processing: remove statistical outliers (balance columns slipping through) ─
+  if (results.length >= 4) {
+    const absVals = results.map(r => Math.abs(r.value)).sort((a, b) => a - b)
+    const p75 = absVals[Math.floor(absVals.length * 0.75)]
+    const ceiling = Math.max(p75 * 8, 5000)  // never remove < 5000 threshold
+    const cleaned = results.filter(r => Math.abs(r.value) <= ceiling)
+    // Only apply if it actually removed something and we keep at least half
+    if (cleaned.length >= results.length / 2 && cleaned.length < results.length) {
+      return cleaned.sort((a, b) => a.date.localeCompare(b.date))
     }
   }
 
