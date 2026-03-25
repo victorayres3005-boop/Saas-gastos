@@ -246,7 +246,7 @@ function AccountForm({
 const EMPTY_FORM: FormState = { name: '', type: 'debit', color: COLORS[0], balance: '', bank: '' }
 
 export default function AccountsPage() {
-  const { accounts, loading, refetch } = useAccounts()
+  const { accounts, loading } = useAccounts()
   const { items: recurring } = useRecurring()
   const { showToast } = useToast()
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -366,7 +366,8 @@ export default function AccountsPage() {
     if (result.error) showToast(result.error, 'error')
     else {
       if (result.id) setBankStorage(result.id, form.bank || null)
-      showToast('Conta criada!'); setModalOpen(false); resetForm(); refetch()
+      showToast('Conta criada!'); setModalOpen(false); resetForm()
+      window.dispatchEvent(new Event('fintrack:accounts-updated'))
     }
   }
 
@@ -382,7 +383,8 @@ export default function AccountsPage() {
     if (result.error) showToast(result.error, 'error')
     else {
       setBankStorage(editingAccount.id, form.bank || null)
-      showToast('Conta atualizada!'); setEditingAccount(null); refetch()
+      showToast('Conta atualizada!'); setEditingAccount(null)
+      window.dispatchEvent(new Event('fintrack:accounts-updated'))
     }
   }
 
@@ -392,7 +394,10 @@ export default function AccountsPage() {
     const result = await deleteAccount(deletingId)
     setDeleting(false); setDeletingId(null)
     if (result.error) showToast(result.error, 'error')
-    else { showToast('Conta removida'); refetch() }
+    else {
+      showToast('Conta removida')
+      window.dispatchEvent(new Event('fintrack:accounts-updated'))
+    }
   }
 
   const openEdit = (account: Account) => {

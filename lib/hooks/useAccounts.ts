@@ -43,5 +43,10 @@ export function useAccounts() {
 
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
 
+  useEffect(() => {
+    window.addEventListener('fintrack:accounts-updated', fetchAccounts)
+    return () => window.removeEventListener('fintrack:accounts-updated', fetchAccounts)
+  }, [fetchAccounts])
+
   return { accounts, loading, refetch: fetchAccounts }
 }
