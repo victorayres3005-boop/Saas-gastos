@@ -15,7 +15,6 @@ import { Modal } from '@/components/ui/Modal'
 import { updateProfile, updateAvatar, updateEmail, updatePassword, deleteAccount } from '@/app/actions/profile'
 import { createClient } from '@/lib/supabase/client'
 import { exportToCSV } from '@/lib/utils/export'
-import { INCOME_CATEGORIES } from '@/lib/utils/categories'
 import type { Database } from '@/lib/supabase/types'
 
 type Transaction = Database['public']['Tables']['transactions']['Row']
@@ -198,30 +197,13 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { showToast('Não autenticado', 'error'); return }
       const { data: txs, error: fetchError } = await supabase
-        .from('transactions').select('id, value, category').eq('user_id', user.id)
+        .from('transactions').select('id, value').eq('user_id', user.id)
       if (fetchError) { showToast(fetchError.message, 'error'); return }
       if (!txs || txs.length === 0) { showToast('Nenhuma transação encontrada', 'error'); return }
-
-      // Fix only transactions whose sign disagrees with their category type:
-      // - Income categories (salary, freelance, etc.) should have value < 0
-      // - Expense categories (food, transport, etc.) should have value > 0
-      const incomeCategories = new Set(INCOME_CATEGORIES as string[])
-      const toFix = txs.filter(tx => {
-        const isIncomeCategory = incomeCategories.has(tx.category)
-        const value = tx.value as number
-        return (isIncomeCategory && value > 0) || (!isIncomeCategory && value < 0)
-      })
-
-      if (toFix.length === 0) {
-        showToast('Nenhum sinal incorreto encontrado — dados já estão corretos!')
-        setFixSignsModal(false)
-        return
-      }
-
-      for (const tx of toFix) {
+      for (const tx of txs) {
         await supabase.from('transactions').update({ value: -(tx.value as number) }).eq('id', tx.id)
       }
-      showToast(`${toFix.length} transaç${toFix.length === 1 ? 'ão corrigida' : 'ões corrigidas'}!`)
+      showToast(`${txs.length} transaç${txs.length === 1 ? 'ão corrigida' : 'ões corrigidas'}!`)
       window.dispatchEvent(new Event('fintrack:transactions-updated'))
       setFixSignsModal(false)
     } finally {
@@ -470,7 +452,7 @@ export default function SettingsPage() {
           <div className="flex items-start gap-3 p-3 bg-negative-light rounded-lg border border-negative/20">
             <AlertTriangle size={16} className="text-negative flex-shrink-0 mt-0.5" />
             <p className="text-xs text-negative leading-relaxed">
-              Esta ação inverte o sinal de <strong>todas as suas transações</strong> — receitas viram despesas e vice-versa. Use apenas se os valores estiverem exibidos de forma trocada.
+              Inverte o sinal de <strong>todas as transações</strong>. Use <strong>uma única vez</strong> se Receitas e Despesas aparecerem trocadas. Executar duas vezes desfaz a correção.
             </p>
           </div>
           <div className="flex gap-3">
