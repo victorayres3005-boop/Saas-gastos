@@ -318,8 +318,8 @@ export default function DashboardPage() {
           Array(4).fill(0).map((_, i) => <MetricCardSkeleton key={i} />)
         ) : (
           <>
-            <MetricCard label="Despesas" value={totalSpent} change={spentChange} />
-            <MetricCard label="Receitas" value={totalIncome} />
+            <MetricCard label="Despesas" value={totalSpent} change={spentChange} valueColor="negative" />
+            <MetricCard label="Receitas" value={totalIncome} valueColor="positive" />
             <MetricCard label="Investido" value={totalInvested} />
             <MetricCard label="Transações" value={txCount} isCurrency={false} isCount />
           </>
