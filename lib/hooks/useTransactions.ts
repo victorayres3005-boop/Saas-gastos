@@ -33,11 +33,16 @@ export function useTransactions(month?: number, year?: number) {
 
   useEffect(() => { fetchTransactions() }, [fetchTransactions])
 
-  // Refaz fetch quando o RecurringProcessor criar novas transações
+  // Refaz fetch quando transações forem criadas/editadas/removidas
   useEffect(() => {
     const handler = () => fetchTransactions()
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchTransactions() }
     window.addEventListener('fintrack:transactions-updated', handler)
-    return () => window.removeEventListener('fintrack:transactions-updated', handler)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('fintrack:transactions-updated', handler)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [fetchTransactions])
 
   const addTransaction = async (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {

@@ -15,6 +15,7 @@ import { Modal } from '@/components/ui/Modal'
 import { updateProfile, updateAvatar, updateEmail, updatePassword, deleteAccount } from '@/app/actions/profile'
 import { createClient } from '@/lib/supabase/client'
 import { exportToCSV } from '@/lib/utils/export'
+import { INCOME_CATEGORIES } from '@/lib/utils/categories'
 import type { Database } from '@/lib/supabase/types'
 
 type Transaction = Database['public']['Tables']['transactions']['Row']
@@ -92,6 +93,8 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false)
   const [clearTxModal, setClearTxModal] = useState(false)
   const [clearingTx, setClearingTx] = useState(false)
+  const [fixSignsModal, setFixSignsModal] = useState(false)
+  const [fixingSigns, setFixingSigns] = useState(false)
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -185,6 +188,44 @@ export default function SettingsPage() {
       }
     } finally {
       setClearingTx(false)
+    }
+  }
+
+  const handleFixSigns = async () => {
+    setFixingSigns(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { showToast('Não autenticado', 'error'); return }
+      const { data: txs, error: fetchError } = await supabase
+        .from('transactions').select('id, value, category').eq('user_id', user.id)
+      if (fetchError) { showToast(fetchError.message, 'error'); return }
+      if (!txs || txs.length === 0) { showToast('Nenhuma transação encontrada', 'error'); return }
+
+      // Fix only transactions whose sign disagrees with their category type:
+      // - Income categories (salary, freelance, etc.) should have value < 0
+      // - Expense categories (food, transport, etc.) should have value > 0
+      const incomeCategories = new Set(INCOME_CATEGORIES as string[])
+      const toFix = txs.filter(tx => {
+        const isIncomeCategory = incomeCategories.has(tx.category)
+        const value = tx.value as number
+        return (isIncomeCategory && value > 0) || (!isIncomeCategory && value < 0)
+      })
+
+      if (toFix.length === 0) {
+        showToast('Nenhum sinal incorreto encontrado — dados já estão corretos!')
+        setFixSignsModal(false)
+        return
+      }
+
+      for (const tx of toFix) {
+        await supabase.from('transactions').update({ value: -(tx.value as number) }).eq('id', tx.id)
+      }
+      showToast(`${toFix.length} transaç${toFix.length === 1 ? 'ão corrigida' : 'ões corrigidas'}!`)
+      window.dispatchEvent(new Event('fintrack:transactions-updated'))
+      setFixSignsModal(false)
+    } finally {
+      setFixingSigns(false)
     }
   }
 
@@ -376,6 +417,21 @@ export default function SettingsPage() {
                     <AlertTriangle size={16} className="text-negative" />
                   </div>
                   <div>
+                    <p className="text-sm font-semibold text-negative">Corrigir sinais das transações</p>
+                    <p className="text-xs text-negative/70 mt-0.5">Inverte receitas↔despesas (use se os valores estão trocados).</p>
+                  </div>
+                </div>
+                <Button variant="danger" size="sm" onClick={() => setFixSignsModal(true)}>
+                  <AlertTriangle size={13} /> Corrigir
+                </Button>
+              </div>
+              <div className="border-t border-negative/20" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-negative/10 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle size={16} className="text-negative" />
+                  </div>
+                  <div>
                     <p className="text-sm font-semibold text-negative">Deletar minha conta</p>
                     <p className="text-xs text-negative/70 mt-0.5">Remove permanentemente todos os seus dados.</p>
                   </div>
@@ -402,6 +458,24 @@ export default function SettingsPage() {
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setClearTxModal(false)} className="flex-1">Cancelar</Button>
             <Button variant="danger" onClick={handleClearTransactions} loading={clearingTx} loadingText="Removendo..." className="flex-1">
+              Confirmar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal corrigir sinais */}
+      <Modal isOpen={fixSignsModal} onClose={() => setFixSignsModal(false)} title="Corrigir sinais das transações">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-negative-light rounded-lg border border-negative/20">
+            <AlertTriangle size={16} className="text-negative flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-negative leading-relaxed">
+              Esta ação inverte o sinal de <strong>todas as suas transações</strong> — receitas viram despesas e vice-versa. Use apenas se os valores estiverem exibidos de forma trocada.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setFixSignsModal(false)} className="flex-1">Cancelar</Button>
+            <Button variant="danger" onClick={handleFixSigns} loading={fixingSigns} loadingText="Corrigindo..." className="flex-1">
               Confirmar
             </Button>
           </div>
