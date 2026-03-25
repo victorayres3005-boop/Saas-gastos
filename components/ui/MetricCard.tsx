@@ -1,5 +1,7 @@
+'use client'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils/formatters'
+import { useAnimatedNumber } from '@/lib/hooks/useAnimatedNumber'
 
 interface MetricCardProps {
   label: string
@@ -12,8 +14,9 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ label, value, change, isCurrency = true, subtitle, isCount, valueColor = 'default' }: MetricCardProps) {
+  const animated = useAnimatedNumber(value)
   const isPositive = change !== undefined && change >= 0
-  const displayValue = isCount ? value.toString() : isCurrency ? formatCurrency(value) : value.toString()
+  const displayValue = isCount ? Math.round(animated).toString() : isCurrency ? formatCurrency(animated) : animated.toString()
   const valueClass = valueColor === 'positive' ? 'text-positive' : valueColor === 'negative' ? 'text-negative' : 'text-text-primary'
 
   return (
