@@ -6,7 +6,7 @@ import { Modal } from '../ui/Modal'
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
 import type { Account } from '@/lib/hooks/useAccounts'
 import {
-  extractTextFromPDF, parseFromText,
+  parsePDFFile,
   type ParsedPix, type ParsedTransaction,
 } from '@/lib/utils/parsePix'
 
@@ -85,8 +85,7 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
     }
     setError(''); setStep('parsing')
     try {
-      const text = await extractTextFromPDF(file)
-      const result = parseFromText(text)
+      const result = await parsePDFFile(file)
 
       if (result.type === 'pix') {
         const p = result.pix
@@ -204,8 +203,8 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
               {step === 'parsing' ? (
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 size={28} className="text-accent animate-spin" />
-                  <p className="text-sm font-medium text-text-secondary">Lendo o PDF...</p>
-                  <p className="text-xs text-text-tertiary">Detectando tipo de documento</p>
+                  <p className="text-sm font-medium text-text-secondary">Analisando o PDF com IA...</p>
+                  <p className="text-xs text-text-tertiary">Pode levar alguns segundos</p>
                 </div>
               ) : (
                 <>
