@@ -256,7 +256,7 @@ export default function DashboardPage() {
 
       {/* Balance Overview */}
       {accounts.length > 0 && (
-        <div className="bg-bg-surface rounded-xl border border-border border-t-2 border-t-accent p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 border-t-2 border-t-accent p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-6">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
               {selectedAccount ? accounts.find(a => a.id === selectedAccount)?.name ?? 'Conta' : 'Saldo Geral'}
@@ -328,7 +328,7 @@ export default function DashboardPage() {
 
       {/* Recorrentes */}
       {activeRecurring.length > 0 && (
-        <div className="bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-8">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="w-1 h-3.5 rounded-full bg-accent" />
@@ -359,14 +359,14 @@ export default function DashboardPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
-        <div className="lg:col-span-2 bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="lg:col-span-2 bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1 h-3.5 rounded-full bg-accent" />
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Distribuição por Categoria</p>
           </div>
           <DonutChart data={donutData} />
         </div>
-        <div className="lg:col-span-3 bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="lg:col-span-3 bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1 h-3.5 rounded-full bg-accent" />
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Últimos 6 Meses por Categoria</p>
@@ -376,7 +376,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Heatmap */}
-      <div className="bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
         <div className="flex items-center gap-2 mb-4">
           <span className="w-1 h-3.5 rounded-full bg-accent" />
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Atividade de Gastos {currentDate.getFullYear()}</p>

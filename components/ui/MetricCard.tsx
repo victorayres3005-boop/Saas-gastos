@@ -17,7 +17,7 @@ export function MetricCard({ label, value, change, isCurrency = true, subtitle, 
   const valueClass = valueColor === 'positive' ? 'text-positive' : valueColor === 'negative' ? 'text-negative' : 'text-text-primary'
 
   return (
-    <div className="bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-3">{label}</p>
       <p className={`text-[28px] font-bold leading-none mb-2 ${valueClass}`}>{displayValue}</p>
       {change !== undefined && (
