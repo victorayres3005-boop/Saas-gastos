@@ -92,18 +92,8 @@ export default function DashboardPage() {
     accounts.reduce((s, a) => s + a.balance, 0)
   , [accounts])
 
-  // Soma líquida (despesas − receitas) — usada para calcular saldo disponível
-  const totalSpentAllTime = useMemo(() =>
-    allTransactions.reduce((s, t) => s + t.value, 0)
-  , [allTransactions])
-
-  // Só despesas (value > 0) — usado para exibição de "Total Gasto"
-  const totalExpenseAllTime = useMemo(() =>
-    allTransactions.filter(t => t.value > 0).reduce((s, t) => s + t.value, 0)
-  , [allTransactions])
 
   // Recorrentes sem transação este mês (processor não rodou ou falhou)
-  // Inclui receitas E despesas recorrentes para o saldo disponível
   const uncoveredRecurring = useMemo(() => {
     const thisMonth = new Date().toISOString().slice(0, 7)
     return activeRecurring.reduce((s, r) => {
@@ -114,9 +104,35 @@ export default function DashboardPage() {
     }, 0)
   }, [activeRecurring, allTransactions])
 
+  // Valores filtrados por conta selecionada (para o Balance card)
+  const accountForBalance = useMemo(() =>
+    selectedAccount ? accounts.find(a => a.id === selectedAccount) : null
+  , [accounts, selectedAccount])
+
+  const accountTxsAllTime = useMemo(() =>
+    selectedAccount ? allTransactions.filter(t => t.account_id === selectedAccount) : allTransactions
+  , [allTransactions, selectedAccount])
+
+  const displayBalance = selectedAccount && accountForBalance ? accountForBalance.balance : totalBalance
+  const displaySpentAllTime = accountTxsAllTime.reduce((s, t) => s + t.value, 0)
+  const displayExpenseAllTime = accountTxsAllTime.filter(t => t.value > 0).reduce((s, t) => s + t.value, 0)
+
+  const accountUncoveredRecurring = useMemo(() => {
+    if (!selectedAccount) return uncoveredRecurring
+    const thisMonth = new Date().toISOString().slice(0, 7)
+    return activeRecurring
+      .filter(r => r.account_id === selectedAccount)
+      .reduce((s, r) => {
+        const hasTx = allTransactions.some(t =>
+          t.date.startsWith(thisMonth) && t.value === r.value && t.description === r.description
+        )
+        return hasTx ? s : s + r.value
+      }, 0)
+  }, [activeRecurring, allTransactions, selectedAccount, uncoveredRecurring])
+
   // Saldo disponível = saldo inicial - transações - recorrentes sem transação este mês
-  const availableBalance = totalBalance - totalSpentAllTime - uncoveredRecurring
-  const spentPercent = totalBalance > 0 ? Math.min((totalExpenseAllTime / totalBalance) * 100, 100) : 0
+  const availableBalance = displayBalance - displaySpentAllTime - accountUncoveredRecurring
+  const spentPercent = displayBalance > 0 ? Math.min((displayExpenseAllTime / displayBalance) * 100, 100) : 0
 
   // Metrics mensais
   const totalSpent = useMemo(() =>
@@ -277,11 +293,11 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-text-secondary mb-0.5">Saldo Total</p>
-              <p className="text-lg font-semibold text-text-primary">{formatCurrency(totalBalance)}</p>
+              <p className="text-lg font-semibold text-text-primary">{formatCurrency(displayBalance)}</p>
             </div>
             <div>
               <p className="text-xs text-text-secondary mb-0.5">Total Gasto</p>
-              <p className="text-lg font-semibold text-text-primary">{formatCurrency(totalExpenseAllTime)}</p>
+              <p className="text-lg font-semibold text-text-primary">{formatCurrency(displayExpenseAllTime)}</p>
             </div>
           </div>
 
