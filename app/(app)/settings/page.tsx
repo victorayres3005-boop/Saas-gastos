@@ -90,6 +90,8 @@ export default function SettingsPage() {
   const [deleteModal, setDeleteModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [clearTxModal, setClearTxModal] = useState(false)
+  const [clearingTx, setClearingTx] = useState(false)
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -165,6 +167,24 @@ export default function SettingsPage() {
       showToast(`${data.length} transações exportadas!`)
     } finally {
       setExportingCSV(false)
+    }
+  }
+
+  const handleClearTransactions = async () => {
+    setClearingTx(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { showToast('Não autenticado', 'error'); return }
+      const { error } = await supabase.from('transactions').delete().eq('user_id', user.id)
+      if (error) showToast(error.message, 'error')
+      else {
+        showToast('Todas as transações foram removidas')
+        window.dispatchEvent(new Event('fintrack:transactions-updated'))
+        setClearTxModal(false)
+      }
+    } finally {
+      setClearingTx(false)
     }
   }
 
@@ -334,24 +354,59 @@ export default function SettingsPage() {
 
           {/* ── Zona de perigo ──────────────────────────────────────── */}
           <SectionCard title="Zona de perigo" danger>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-negative/10 flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle size={16} className="text-negative" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-negative/10 flex items-center justify-center flex-shrink-0">
+                    <Trash2 size={16} className="text-negative" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-negative">Limpar todas as transações</p>
+                    <p className="text-xs text-negative/70 mt-0.5">Remove todas as transações de todos os meses.</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-negative">Deletar minha conta</p>
-                  <p className="text-xs text-negative/70 mt-0.5">Remove permanentemente todos os seus dados.</p>
-                </div>
+                <Button variant="danger" size="sm" onClick={() => setClearTxModal(true)}>
+                  <Trash2 size={13} /> Limpar
+                </Button>
               </div>
-              <Button variant="danger" size="sm" onClick={() => setDeleteModal(true)}>
-                <Trash2 size={13} /> Deletar
-              </Button>
+              <div className="border-t border-negative/20" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-negative/10 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle size={16} className="text-negative" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-negative">Deletar minha conta</p>
+                    <p className="text-xs text-negative/70 mt-0.5">Remove permanentemente todos os seus dados.</p>
+                  </div>
+                </div>
+                <Button variant="danger" size="sm" onClick={() => setDeleteModal(true)}>
+                  <Trash2 size={13} /> Deletar
+                </Button>
+              </div>
             </div>
           </SectionCard>
 
         </div>
       </div>
+
+      {/* Modal limpar transações */}
+      <Modal isOpen={clearTxModal} onClose={() => setClearTxModal(false)} title="Limpar todas as transações">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-negative-light rounded-lg border border-negative/20">
+            <AlertTriangle size={16} className="text-negative flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-negative leading-relaxed">
+              Esta ação remove <strong>todas as transações de todos os meses</strong>. Esta ação não pode ser desfeita.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setClearTxModal(false)} className="flex-1">Cancelar</Button>
+            <Button variant="danger" onClick={handleClearTransactions} loading={clearingTx} loadingText="Removendo..." className="flex-1">
+              Confirmar
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal confirmar exclusão */}
       <Modal isOpen={deleteModal} onClose={() => { setDeleteModal(false); setDeleteConfirm('') }} title="Deletar conta">
