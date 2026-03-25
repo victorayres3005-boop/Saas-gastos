@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { BankLogo } from '@/components/ui/BankLogo'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { createAccount, updateAccount, deleteAccount } from '@/app/actions/accounts'
 import { setBankStorage } from '@/lib/hooks/useAccounts'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
@@ -456,13 +457,13 @@ export default function AccountsPage() {
           ))}
         </div>
       ) : accounts.length === 0 ? (
-        <div className="bg-bg-surface rounded-xl border border-accent/30 py-16 text-center shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-          <Wallet size={32} className="mx-auto mb-3 text-text-tertiary" />
-          <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma conta cadastrada</p>
-          <p className="text-xs text-text-tertiary mb-4">Adicione seus cartões e contas bancárias</p>
-          <Button size="sm" onClick={() => { resetForm(); setModalOpen(true) }}>
-            <Plus size={14} /> Adicionar conta
-          </Button>
+        <div className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+          <EmptyState
+            icon={Wallet}
+            title="Nenhuma conta cadastrada"
+            description="Adicione seus cartões e contas bancárias para ter uma visão completa do seu dinheiro."
+            action={{ label: '+ Adicionar conta', onClick: () => { resetForm(); setModalOpen(true) } }}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-3">

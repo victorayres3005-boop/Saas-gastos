@@ -1,11 +1,12 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { MetricCardSkeleton } from '@/components/ui/Skeleton'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { LineChart } from '@/components/charts/LineChart'
 import { ActivityHeatmap } from '@/components/charts/ActivityHeatmap'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useTransactions } from '@/lib/hooks/useTransactions'
 import { useAccounts } from '@/lib/hooks/useAccounts'
 import { useRecurring } from '@/lib/hooks/useRecurring'
@@ -325,6 +326,17 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* Empty state quando não há transações */}
+      {!loading && transactions.length === 0 && (
+        <div className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-8">
+          <EmptyState
+            icon={PlusCircle}
+            title="Nenhuma transação neste mês"
+            description="Adicione sua primeira transação para começar a visualizar seus dados financeiros."
+          />
+        </div>
+      )}
 
       {/* Recorrentes */}
       {activeRecurring.length > 0 && (

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { AccountBadge } from '@/components/ui/AccountBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { addRecurring, deleteRecurring, toggleRecurring } from '@/app/actions/recurring'
 import { runRecurringProcessor } from '@/components/RecurringProcessor'
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
@@ -149,13 +150,13 @@ export default function RecurringPage() {
       {loading ? (
         <div className="text-center py-16 text-sm text-text-tertiary">Carregando...</div>
       ) : items.length === 0 ? (
-        <div className="bg-bg-surface rounded-xl border border-accent/30 py-16 text-center shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-          <RefreshCw size={32} className="mx-auto mb-3 text-text-tertiary" />
-          <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma transação recorrente</p>
-          <p className="text-xs text-text-tertiary mb-4">Adicione assinaturas, salário, aluguel e outros fixos</p>
-          <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setModalOpen(true) }}>
-            <Plus size={14} /> Adicionar
-          </Button>
+        <div className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+          <EmptyState
+            icon={RefreshCw}
+            title="Nenhuma transação recorrente"
+            description="Adicione assinaturas, salário, aluguel e outros compromissos fixos."
+            action={{ label: '+ Adicionar', onClick: () => { setForm(EMPTY_FORM); setModalOpen(true) } }}
+          />
         </div>
       ) : (
         <div className="bg-bg-surface rounded-xl border border-accent/30 overflow-hidden shadow-[0_1px_3px_rgba(255,107,53,0.08)]">

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input'
 import { addGoal, updateGoalProgress, deleteGoal } from '@/app/actions/goals'
 import { addTransaction } from '@/app/actions/transactions'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/lib/utils/formatters'
 
 const GOAL_COLORS = ['#FF6B35', '#16A34A', '#2563EB', '#DB2777', '#D97706', '#7C3AED']
@@ -197,13 +198,13 @@ export default function GoalsPage() {
       {loading ? (
         <div className="text-center py-16 text-sm text-text-tertiary">Carregando...</div>
       ) : goals.length === 0 ? (
-        <div className="bg-bg-surface rounded-xl border border-accent/30 py-16 text-center shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-          <Target size={32} className="mx-auto mb-3 text-text-tertiary" />
-          <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma meta criada</p>
-          <p className="text-xs text-text-tertiary mb-4">Crie uma meta para acompanhar seus objetivos</p>
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            <Plus size={14} /> Criar meta
-          </Button>
+        <div className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+          <EmptyState
+            icon={Target}
+            title="Nenhuma meta criada"
+            description="Defina objetivos financeiros e acompanhe seu progresso mês a mês."
+            action={{ label: '+ Nova meta', onClick: () => setModalOpen(true) }}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
