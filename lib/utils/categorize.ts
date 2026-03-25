@@ -1,107 +1,275 @@
 import type { CategoryKey } from './categories'
 
-// ─── Rule table ───────────────────────────────────────────────────────────────
-// Each rule: [category, regex].  First match wins (order matters).
+// ─── Normalização ─────────────────────────────────────────────────────────────
+// Remove acentos, caracteres especiais e prefixos de tipo de transação
+// que não dizem nada sobre a categoria (PIX ENVIADO, COMPRA DEBITO, etc.)
 
-const EXPENSE_RULES: [CategoryKey, RegExp][] = [
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[*|_\-\.\/\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function stripTxPrefix(s: string): string {
+  return s
+    // Pix
+    .replace(/^pix\s+(enviado|recebido|transf\.?|transferencia|para|de|cred\.?|deb\.?)\s*/i, '')
+    // Compra
+    .replace(/^compra\s+(no\s+)?(debito|credito|deb\.?|cred\.?|cartao|cart\.?)(\s+\d{2}\/\d{2})?\s*/i, '')
+    // TED / DOC / TEF
+    .replace(/^(ted|doc|tef)\s+(enviado|recebido|credit\.?|debit\.?)?\s*/i, '')
+    // Saque
+    .replace(/^saque\s+(caixa|eletronico|atm|24h|banco)?\s*/i, '')
+    // Débito automático
+    .replace(/^deb(ito)?\s+aut(omatico|\.?)?\s*/i, '')
+    // Pagamento
+    .replace(/^pag(amento|to|t\.?)\s+(boleto|fatura|carne|de\s+|do\s+)?\s*/i, '')
+    // Transferência
+    .replace(/^transf(erencia|\.?)?\s+(de\s+|para\s+|rec\.?|env\.?)?\s*/i, '')
+    // Crédito / Débito em conta
+    .replace(/^(credito|debito)\s+(em\s+conta|conta\s+corrente|cc)?\s*/i, '')
+    // Recebimento
+    .replace(/^receb(imento|\.?)?\s+(de\s+|credit\.?)?\s*/i, '')
+    // Lançamento
+    .replace(/^lancamento\s+(credito|debito)\s*/i, '')
+    .trim()
+}
+
+// Aplica normalização + remoção de prefixo
+function prep(raw: string): string {
+  return stripTxPrefix(normalize(raw))
+}
+
+// ─── Regras por categoria ─────────────────────────────────────────────────────
+// Cada regra é testada no texto NORMALIZADO e SEM PREFIXO DE TRANSAÇÃO.
+// Use padrões curtos/parciais para capturar nomes truncados (20-30 chars).
+
+type Rule = [CategoryKey, RegExp]
+
+const RULES: Rule[] = [
+
+  // ══ RECEITAS ════════════════════════════════════════════════════════════════
+
+  ['salary',
+    /\b(salario|salario\s+liq|holerite|folha\s+(de\s+)?pag|proventos|vencimento|remuneracao|remu?n\.?|pgto\s+sal|credit[oa]\s+sal|13[o°]?\s*(sal)?|decimo\s+terceiro|ferias|1\/3\s+ferias|rescisao|verbas?\s+rescis|fgts\s+|adiant(amento)?\s+(sal|de\s+sal))\b/i],
+
+  ['freelance',
+    /\b(freelance|autonomo|honor(arios?)?|nota\s+fiscal|nf(e|se)?\s*\d|mei\s+|pgto\s+(serv|projeto)|pagamento\s+serv|prestacao\s+serv|receb\s+(serv|proj))\b/i],
+
+  ['dividend',
+    /\b(dividend[oa]|jcp|juros\s+cap|rendimento\s+(cdb|lci|lca|lc|fii|fi|fundo|poupan|tesouro|invest)|resgat[eo]\s+(cdb|lci|lca|lc|fundo|invest|aplica)|rentabilidade|ir\s+sobre\s+rend|creditado\s+rend|rend\s+cred|creditado\s+(cdb|lci|lca))\b/i],
+
+  ['rent_income',
+    /\b(aluguel\s+(recebido|cred|credit)|locacao\s+recebida|repasse\s+aluguel|renda\s+aluguel|aluguel\s+im[oó]vel\s+rec)\b/i],
+
+  // ══ DESPESAS ════════════════════════════════════════════════════════════════
+
   // ── Alimentação ─────────────────────────────────────────────────────────────
-  ['food', /ifood|rappi|uber\s*eat|james|99food|ze[\s_-]?delivery|aiq|yummy/i],
-  ['food', /mcdonalds?|mc\s*don|burger\s*king|bk\s+|subway|kfc|bob'?s|habib'?s|pizza\s*hut|domino'?s|giraffas|madero|outback|applebee|chilis/i],
-  ['food', /supermercado|mercado|hipermercado|atacad[aã]o|ass[aá]i|mart|carrefour|p[aã]o\s*de\s*a[cç][uú]car|extra\s*|walmart|sams?\s*club|makro|atacarejo|big\s+|condor\s+|copa\s+|hortifruti|sacolão|feira\s+livre/i],
-  ['food', /restaurante|lanchonete|lanche|comida|culin[aá]ria|sushi|pizzaria|churrascaria|bar\s+e\s+|bistr[oô]|eataly|padaria|boulangerie|confeitaria|doceria|sorveteria|sorvete/i],
-  ['food', /almo[çc]o|janta|caf[eé]\s+(da\s+manh[aã]|expresso)|refeic|refei[çc][aã]o|marmita|quentinha|delivery\s+de\s+comida/i],
+  // Delivery apps
+  ['food',
+    /\b(ifood|ifoode|rappi|ubereats|uber\s+eat|james\s+del|james\s+app|ze\s+del|zedel|aiqfome|loggi\s+food|chefdelivery|delivery\s+much)\b/i],
+
+  // Fast food (nomes truncados a 10-12 chars são comuns em extratos)
+  ['food',
+    /\b(mcdon(alds?|ald)?|mcdonald|mc\s+lan|burguer?\s+king|bk\s+lanche|bk\s+|subway|kfc\s+|bob'?s\s+|bobs\s+|habib'?s|habib\s+|domino'?s|pizza\s*hut|giraffas|madero|outback|applebee|chilis|popeye|five\s+guys|taco\s+bell|starbucks|starbuck)\b/i],
+
+  // Redes de supermercado (vários nomes truncados)
+  ['food',
+    /\b(supermer|superm\s|mercad(inho|ao|o\s+extra|o\s+livre)?|hipermercado|atacadao|atacad\s+|assai\s+|pao\s+de\s+acucar|panificadora|grupo\s+cbd|grupo\s+gpa|carrefour|carref\s+|extra\s+super|walmart|sams\s+club|makro|condor\s+|copa\s+super|hortifruti|sacolao|feira\s+(livre|municipal)|quitanda|verdureiro|acougue|frigorifico|mercearia)\b/i],
+
+  // Restaurantes, padarias, lanchonetes
+  ['food',
+    /\b(restaurante|rest\s+|lanchonete|lanch\s+|pizza(ria)?|churrascaria|churrasc\s+|bistr[ôo]|sushi|japanese|temaki|yakissoba|galinhada|marmita|quentinha|refeitorio|cantina|bar\s+(e\s+)?(rest|lanch)|food\s+court|praça\s+de\s+alim|cafeteria|cafe\s+|padaria|padarinha|boulangerie|confeitaria|doceria|brigadeiro|sorveteria|sorvete|acai\s+|açai\s+|tapiocaria|tapioca\s+|crepe\s+|pastelaria|pastel\s+)\b/i],
+
+  // Bebidas e conveniência
+  ['food',
+    /\b(ambev|heineken|skol|brahma|cervejaria|distribuidora\s+beb|emporio|empori\s+|mercearia|adega|vinhos?|minimercado|mini\s+mercado|conveniencia|conveniên|7\s*eleven|am\s*pm)\b/i],
 
   // ── Transporte ───────────────────────────────────────────────────────────────
-  ['transport', /uber|99\s*(pop|taxi|moto)|indriver|cabify|buser|blablacar|taxi|t[aá]xi/i],
-  ['transport', /gasolina|combust[ií]vel|etanol|diesel|posto\s+(de\s+)?gasolina|posto\s+shell|posto\s+ipiranga|posto\s+petrobras|br\s+distribui|auto\s+posto|raizen|vibra/i],
-  ['transport', /ped[aá]gio|autoban|cart[aã]o\s+sem\s+parar|veloe|connect\s+car|taggy|moving/i],
-  ['transport', /estacion(amento)?|parking|park\s*\+/i],
-  ['transport', /metr[oô]|[ôo]nibus|[ôo]nibu|cptm|sptrans|bilhete\s+[úu]nico|cart[aã]o\s+bom|brt|vlt|trem\s+urbano|passagem\s+(de\s+)?(metro|onibus|trem)/i],
-  ['transport', /gol\s+|latam|azul\s+|tam\s+|passagem\s+(a[eé]rea|voo)|voo\s+|aeroporto|compra\s+voo/i],
-  ['transport', /localiza|movida|unidas|hertz|avis|alamo|aluguel\s+de\s+carro|locacao\s+ve[ií]culo/i],
-  ['transport', /ipva|licenciamento\s+ve[ií]culo|dpvat|seguro\s+auto|vistoria/i],
+  ['transport',
+    /\b(uber\s+|99\s+(pop|taxi|moto|app)|indriver|cabify|buser\s+|blablacar|taxi\s+|taxista)\b/i],
+
+  // Postos de combustível (nomes truncados)
+  ['transport',
+    /\b(posto\s+(de\s+)?gas|posto\s+(shell|ipiranga|petrobras|br\s+|esso|texaco|raizen|ale|bandeirante|satelite)|auto\s+posto|gas\s+station|gasolina|combust|etanol|alcool\s+veic|diesel|arla|br\s+distribui|ipiranga\s+|shell\s+|vibra\s+|raizen\s+)\b/i],
+
+  ['transport',
+    /\b(pedagio|sem\s+parar|veloe|conectcar|connect\s+car|taggy\s+|autoban|ecorodovias|cart\s+pedagio|via\s+\d{3}|rod\s+(pres|gov|br))\b/i],
+
+  ['transport',
+    /\b(estacion(amento)?|parking\s+|park\s+\d|park\s+plus|estapark|multipark|rotativos?)\b/i],
+
+  ['transport',
+    /\b(metro\s+|metr[ôo]\s+|cptm\s+|sptrans|bilhete\s+unico|cartao\s+bom|brt\s+|vlt\s+|trem\s+urb|onibus\s+|oibus|passagem\s+(metro|onib|trem|ferrov)|ciclo)\b/i],
+
+  ['transport',
+    /\b(latam\s+|gol\s+(ling|air|transp)|azul\s+(bras|air)|tam\s+|passagem\s+aere|voo\s+|aeroporto|embarque|check.?in|cia\s+aere)\b/i],
+
+  ['transport',
+    /\b(localiza\s+|movida\s+|unidas\s+|hertz\s+|avis\s+|aluguel\s+(de\s+)?carr|locacao\s+(de\s+)?veic)\b/i],
+
+  ['transport',
+    /\b(ipva\s+|licencia(mento)?\s+veic|dpvat|vistoria\s+(veic|auto)|seguro\s+(auto|veic|carro|moto)\s+)\b/i],
 
   // ── Moradia ───────────────────────────────────────────────────────────────────
-  ['housing', /aluguel\s*(pago|residencial|im[oó]vel)?|locacao\s+im[oó]vel|arrendamento/i],
-  ['housing', /condom[ií]nio|taxa\s+condominial|administradora\s+cond/i],
-  ['housing', /iptu|imposto\s+predial|taxa\s+de\s+im[oó]vel/i],
-  ['housing', /[aá]gua\s*e\s*esgoto|sabesp|copasa|cedae|caesb|cagece|embasa|sanepar|caern|compesa|aguas?\s+do\s+rio/i],
-  ['housing', /energia|luz\s+|eletricidade|enel\s+|cemig|cpfl|coelba|coelce|cosern|celpe|celesc|edp\s+|elektro|equatorial|energisa|ampla\s+energia|elektro|light\s+s\.a\./i],
-  ['housing', /g[aá]s\s*(natural|canalizado|encanado)?|comg[aá]s|ceg\s+|superg[aá]s|liquig[aá]s|ultrag[aá]z/i],
-  ['housing', /internet|banda\s+larga|fibra\s+[óo]ptica|claro\s+|vivo\s+|tim\s+(fixa|residencial)|net\s+(virtua|banda)|oi\s+(fibra|fixo)|algar\s+|sercomtel|brisanet/i],
-  ['housing', /financiamento\s+im[oó]vel|cef\s+hab|caixa\s+hab|prestacao\s+imovel|mensalidade\s+im[oó]vel/i],
-  ['housing', /m[oó]veis?|reforma|construtora|empreiteira|material\s+de\s+constru|leroy\s+merlin|telha\s+norte|c[oô]nsul|brastemp/i],
+  // Água e esgoto
+  ['housing',
+    /\b(sabesp|copasa|cedae|caesb|cagece|embasa|sanepar|caern|compesa|aguas\s+(de\s+)?(rio|brasil|parana|goias|manaus)|saneago|casan|corsan|sanesul|agespisa|caerd|cagepa|cosama)\b/i],
+
+  // Energia elétrica
+  ['housing',
+    /\b(enel\s+|cemig\s+|cpfl\s+|coelba\s+|coelce\s+|cosern\s+|celpe\s+|celesc\s+|edp\s+|elektro|equatorial|energisa|ampla\s+|light\s+s|eletropaulo|aes\s+sul|boa\s+vista\s+energ|ceron\s+|eletroacre|amazonas\s+energ|roraima\s+energ)\b/i],
+
+  // Gás
+  ['housing',
+    /\b(comgas|com\s*gas|ceg\s+|gas\s+natural|gas\s+canaliz|supergas|liquigas|ultragaz|nacional\s+gas)\b/i],
+
+  // Internet e telefone fixo
+  ['housing',
+    /\b(claro\s+(res|fixa|banda|fibra)|vivo\s+(fixa|res|fibra|banda)|net\s+(virtua|banda|res)|oi\s+(fibra|fixa|res)|algar\s+|sercomtel|brisanet|unifique|desktop\s+internet|wantel|mob\s+telecom)\b/i],
+
+  // Aluguel, condomínio, IPTU
+  ['housing',
+    /\b(aluguel|condominio|cond\s+|taxa\s+cond|adm\s+cond|iptu\s+|imposto\s+predial|tx\s+im[oó]vel|arrendamento)\b/i],
+
+  // Financiamento imobiliário
+  ['housing',
+    /\b(financiamento\s+im[oó]v|parcela\s+im[oó]v|cef\s+hab|caixa\s+hab|bradesco\s+im[oó]v|itau\s+im[oó]v|prestacao\s+im[oó]v|minha\s+casa)\b/i],
+
+  // Materiais de construção / móveis
+  ['housing',
+    /\b(leroy\s+merlin|telha\s+norte|c\s*\&\s*c\s+|sodimac|dicico|etna\s+m|casa\s+show|center\s+cast|construcao|reforma\s+|empreitei|pinturas?)\b/i],
 
   // ── Saúde ─────────────────────────────────────────────────────────────────────
-  ['health', /farm[aá]cia|drogaria|drogasil|droga\s+raia|drogão|ultrafarma|extrafarma|pague\s+menos|panvel|nissei|redes?\s+nissei|onofre|pacheco/i],
-  ['health', /m[eé]dico|consulta\s+(m[eé]dica)?|cl[ií]nica|hospital|laborat[oó]rio|exame|radiologia|ultrassom|raio-?x|tomografia|ressonancia/i],
-  ['health', /dasa|fleury|einstein|s[íi]rio\s+liban[eê]s|santa\s+casa|unimed|amil|sulamerica\s+sau|bradesco\s+sau|notre\s+dame|hapvida|gndi|prevent\s+senior/i],
-  ['health', /plano\s+de\s+sa[uú]de|convenio\s+m[eé]dico|mensalidade\s+plano|contribui[çc][aã]o\s+plano/i],
-  ['health', /dentista|odonto|odontologia|odon|clinica\s+dent|ortodontia|implante\s+dent/i],
-  ['health', /academia|gym|smart\s+fit|bluefit|bodytech|crossfit|pilates|yoga|personal\s+trainer/i],
-  ['health', /rem[eé]dio|medicamento|vitamina|suplemento|whey|creatina/i],
+  // Farmácias
+  ['health',
+    /\b(drogasil|droga\s+raia|drogaraia|drogaria|farmacia|farm[áa]cia|ultrafarma|extra\s+farm|pague\s+menos|panvel\s+|nissei\s+|onofre\s+|pacheco\s+|drogao\s+|sao\s+paulo\s+farm|net\s+farma|farma\s+conde|raia\s+drog|drogal\s+)\b/i],
+
+  // Planos de saúde
+  ['health',
+    /\b(unimed\s+|amil\s+|sulamerica\s+sau|bradesco\s+sau|notre\s+dame|hapvida|gndi\s+|prevent\s+senior|mediservice|intermed|green\s+line|assim\s+saude|mensalidade\s+plano|plano\s+(de\s+)?saude|convenio\s+med)\b/i],
+
+  // Hospitais, clínicas, laboratórios
+  ['health',
+    /\b(einstein|fleury|dasa\s+|sirio\s+liban|santa\s+casa|upa\s+|ubs\s+|hospital\s+|hosp\s+|clinica\s+|policlinica|consultorio|laboratorio|lab\s+|exame\s+|radiologia|ultrassom|tomografia|ressonancia)\b/i],
+
+  // Dentista
+  ['health',
+    /\b(dentista|odonto|ortodontia|implante\s+dent|clinica\s+dent|odontologo|oralsin|sorridents|odontoprev)\b/i],
+
+  // Academia e bem-estar
+  ['health',
+    /\b(smartfit|smart\s+fit|bluefit|bodytech|cia\s+athletica|academia\s+|crossfit|pilates|yoga\s+|personal\s+train|bio\s+ritmo|bio\s+system|total\s+pass)\b/i],
+
+  // Medicamentos, suplementos
+  ['health',
+    /\b(remedio|medicamento|vitamina\s+|suplemento|whey\s+|creatina|probiotico|collagen|omega\s+3)\b/i],
 
   // ── Educação ──────────────────────────────────────────────────────────────────
-  ['education', /escola|col[eé]gio|universidade|faculdade|institui[çc][aã]o\s+de\s+ensino|mensalidade\s+escolar|anuidade\s+escolar/i],
-  ['education', /curso|capacita[çc][aã]o|treinamento|workshop|mentoria|aula\s+(de|do)|aulas\s+(de|do)|coaching/i],
-  ['education', /udemy|alura|coursera|hotmart|eduzz|kiwify|skillshare|domestika|babbel|duolingo\s+plus/i],
-  ['education', /livro|livraria|saraiva|cultura\s+liv|amazon\s+livro|fnac|travessa/i],
-  ['education', /material\s+escolar|papelaria|caneta|caderno|mochila\s+(escolar)?/i],
+  ['education',
+    /\b(escola\s+|colegio\s+|col\s+|universidade|faculdade|fac\s+|institui[cç]\s+(de\s+)?ensino|mensalidade\s+(esc|fac|col)|anuidade\s+(esc|acad)|matricula\s+)\b/i],
+
+  ['education',
+    /\b(curso\s+|capacitacao|treinamento|workshop|mentoria|aula\s+(de|do)\s+|coaching|pos\s+(grad|lato|stricto)|mba\s+)\b/i],
+
+  ['education',
+    /\b(udemy|alura\s+|coursera|hotmart|eduzz|kiwify|skillshare|domestika|babbel|duolingo|descomplica|gran\s+curso|estrategia\s+concurso)\b/i],
+
+  ['education',
+    /\b(livraria|livro\s+|saraiva\s+|cultura\s+liv|fnac\s+|travessa\s+|amazon\s+liv|material\s+esc|papelaria)\b/i],
 
   // ── Lazer ─────────────────────────────────────────────────────────────────────
-  ['leisure', /cinema|ingresso|ingresso\s+com|cinemark|cinepolis|uci\s+|show\s+|teatro|opera|festival|evento|ticket(master)?/i],
-  ['leisure', /shopping|shoppings|mall\s+|plaza\s+|parque\s+(aquatico|tem[aá]tico|diversoes)|hopi\s+hari|beto\s+carrero|beach\s+park/i],
-  ['leisure', /roupa|vestuario|modas?|moda\s+|zara|h&m|c&a|renner|riachuelo|marisa|hering|leader|forever\s+21|shein|amaro|farm\s+|animale|oakley|adidas|nike|puma|mizuno|under\s+armour/i],
-  ['leisure', /calçado|sapato|tenis\s+|sapataria|arezzo|schutz|melissa|havaianas|via\s+marte/i],
-  ['leisure', /jogo|game|steam|playstation|xbox|nintendo|nuuvem|epic\s+games|riot\s+games|blizzard|in-game/i],
-  ['leisure', /viagem|hotel|pousada|hostel|airbnb|booking|trivago|decolar|hospedagem|resort|expedia/i],
-  ['leisure', /beleza|sal[aã]o|cabeleireiro|manicure|spa|est[eé]tica|esteticista|barbear[ia]|barbearia/i],
+  // Entretenimento
+  ['leisure',
+    /\b(cinema|cinemark|cinepolis|uci\s+|kinoplex|ingresso(s)?\s+|teatro\s+|opera\s+|show\s+|festival\s+|concerto|ticket(master)?|sympla|eventbrite|blueticket)\b/i],
 
-  // ── Assinaturas ───────────────────────────────────────────────────────────────
-  ['saas', /netflix|spotify|amazon\s*(prime|music)|disney(\+|plus)|hbo\s*max|max\s+\d|apple\s*(tv|music|arcade|one)|youtube\s*premium|paramount|globoplay|telecine|deezer|tidal/i],
-  ['saas', /microsoft\s*(365|office)|google\s*(one|workspace)|dropbox|icloud|adobe|canva\s*pro|figma|notion\s*plus|slack|zoom\s+pro/i],
-  ['saas', /linkedin\s*premium|chatgpt|openai|midjourney|anthr[o]pic|cursor\s+pro/i],
-  ['saas', /celular|telefone\s+m[oó]vel|recarga\s+(celular|tim|vivo|claro)|plano\s+(m[oó]vel|celular)|tim\s+black|vivo\s+total|claro\s+controle/i],
-  ['saas', /antivirus|kaspersky|norton|mcafee|vpn\s+|nordvpn|expressvpn/i],
-  ['saas', /assinatura|mensalidade\s+(assinatura|servi[çc]o)|plano\s+mensal|subscri[çc][aã]o/i],
+  // Viagem e hospedagem
+  ['leisure',
+    /\b(hotel\s+|pousada\s+|hostel\s+|airbnb|booking\s+|trivago|decolar|hospedagem|resort\s+|apart\s+hotel|viagem\s+|expedia|hotel\s+inn|apart\s+)|passagem\b/i],
+
+  // Vestuário e calçados
+  ['leisure',
+    /\b(zara\s+|h\s*&\s*m\s+|c\s*&\s*a\s+|renner\s+|riachuelo|marisa\s+|hering\s+|leader\s+|forever\s+21|shein\s+|amaro\s+|farm\s+|animale|arezzo|schutz\s+|melissa\s+|havaianas|calcado|calcados|sapato|sapataria|tenis\s+(adidas|nike|puma)|oakley|adidas\s+|nike\s+|puma\s+|mizuno|under\s+armour|centauro|netshoes)\b/i],
+
+  // Shopping e lojas de departamento
+  ['leisure',
+    /\b(shopping\s+|shoppings|mall\s+|americanas\s+|casas\s+bahia|magazine\s+luiza|magalu|ponto\s+frio|fast\s+shop|ricardo\s+elet|lojas\s+(ame|bahia|salv|cearens|maia|becker)|lojas\s+cia\s+|marabraz\s+|mobilplan)\b/i],
+
+  // Beleza e estética
+  ['leisure',
+    /\b(salao\s+(de\s+)?beleza|cabeleireiro|manicure|pedicure|spa\s+|estetica|esteticista|barbearia|barbeiro|sobrancelha|depilacao|depil\s+|salon\s+|beauty\s+)\b/i],
+
+  // Games e lazer digital
+  ['leisure',
+    /\b(steam\s+|playstation|xbox\s+|nintendo\s+|nuuvem|epic\s+games|riot\s+games|blizzard|gaming|in.game|google\s+play|apple\s+store|app\s+store)\b/i],
+
+  // Parques, turismo
+  ['leisure',
+    /\b(parque\s+(aquatic|tematic|diverso)|hopi\s+hari|beto\s+carrero|beach\s+park|museu\s+|aquario|zoologico)\b/i],
+
+  // ── Assinaturas / SaaS ────────────────────────────────────────────────────────
+  // Streaming e entretenimento digital
+  ['saas',
+    /\b(netflix\s+|netflix\.com|spotify\s+|amazon\s+(prime|music)|disney(\+|plus|\s+plus)|hbo\s+(max|go)|max\s+\d|apple\s+(tv|music|arcade|one)|youtube\s+(premium|music)|paramount\s+(plus|\+)|globoplay|telecine|deezer\s+|tidal\s+|mubi\s+|crunchyroll)\b/i],
+
+  // Produtividade e cloud
+  ['saas',
+    /\b(microsoft\s+(365|office)|google\s+(one|workspace)|dropbox\s+|icloud\s+|adobe\s+|canva\s+(pro|plan)|figma\s+|notion\s+|slack\s+|zoom\s+(pro|plan)|monday\.com|pipedrive|hubspot)\b/i],
+
+  // Planos móveis (celular)
+  ['saas',
+    /\b(tim\s+(black|beta|controle|ult|prat|pós?)|vivo\s+(turbo|total|easy|familia|v|contole)|claro\s+(controle|pos|pre|res|familia)|oi\s+(pos|total|livre)|nextel|algar\s+movel|plano\s+(celular|m[oó]vel)|recarga\s+(cel|tim|vivo|claro|oi|nextel)|mensalidade\s+cel)\b/i],
+
+  // Segurança e outros SaaS
+  ['saas',
+    /\b(kaspersky|norton\s+|mcafee\s+|bitdefender|nordvpn|expressvpn|vpn\s+|antivirus|assinatura\s+|mensalidade\s+(serv|assina)|subscricao|plan\s+(mensal|anual))\b/i],
+
+  // LinkedIn e ferramentas profissionais
+  ['saas',
+    /\b(linkedin\s+prem|chatgpt\s+plus|openai\s+|midjourney|cursor\s+pro|github\s+|atlassian|jira\s+|confluence|vercel\s+|heroku)\b/i],
 
   // ── Investimentos ─────────────────────────────────────────────────────────────
-  ['invest', /xp\s+(invest|corretora)|btg\s+pactual|rico\s+invest|clear\s+corretora|nu\s*invest|easynvest|inter\s+invest|ita[uú]\s+corretora|bradesco\s+corretora|warren\s+invest|genial\s+invest/i],
-  ['invest', /tesouro\s+direto|tesouro\s+(selic|ipca|prefixado)|aplica[cç][aã]o\s+(em\s+)?cdb|lci\s+|lca\s+|cri\s+|cra\s+|debenture/i],
-  ['invest', /compra\s+(de\s+)?(a[cç][aã]o|ações|fii|etf|bdr)|investimento\s+em\s+|aplica[cç][aã]o\s+|aporte\s+(de\s+)?investimento/i],
-  ['invest', /prev|previdencia\s+(privada|complementar)|pgbl|vgbl|fundo\s+de\s+pens/i],
-  ['invest', /seguro\s+de\s+vida|seguro\s+residencial|porto\s+seguro|sulamérica\s+seg|ita[uú]\s+seg|tokio\s+marine|bradesco\s+seg/i],
+  ['invest',
+    /\b(xp\s+(invest|corr)|btg\s+(pact|invest)|rico\s+(invest|corr)|clear\s+(corr|invest)|nuinvest|nu\s+invest|easynvest|inter\s+invest|itau\s+(corr|invest|bba)|bradesco\s+(corr|invest)|genial\s+invest|warren\s+(invest|asset)|modalmais|ModalMais|icatu|c6\s+invest|avenue\s+|inter\s+corr)\b/i],
+
+  ['invest',
+    /\b(aplica[cç][aã]o\s+(em\s+)?(cdb|lci|lca|lc|fi\s+|fii|tesouro|renda\s+fix)|resgat[eo]\s+(cdb|lci|lca|fundo|invest)|aporte\s+(invest|carteira)|compra\s+(a[cç][aã]o|acoes|fii\s+|etf\s+|bdr)|tesouro\s+(selic|ipca|prefixado|direto))\b/i],
+
+  ['invest',
+    /\b(previdencia\s+(priv|compl|pgbl|vgbl)|pgbl\s+|vgbl\s+|fundo\s+(de\s+)?pens|aporte\s+(prev|pgbl|vgbl)|resgate\s+prev)\b/i],
+
+  ['invest',
+    /\b(seguro\s+(de\s+)?vida|seguro\s+(res|predial)|porto\s+seguro|sulamérica\s+seg|itau\s+seg|tokio\s+mar|bradesco\s+seg|azul\s+seg|mapfre\s+)\b/i],
 ]
 
-const INCOME_RULES: [CategoryKey, RegExp][] = [
-  ['salary',      /sal[aá]rio|holerite|folha\s+(de\s+)?(pagamento|pgt)|proventos|vencimento\s+(func|serv)|remunera[çc][aã]o|pgto\s+sal[aá]rio|credit[oa]\s+sal[aá]rio/i],
-  ['salary',      /13[oº]?\s*(sal[aá]rio|sal\.?)?|decimo\s+terceiro|f[eé]rias\s+(e\s+)?1\/3|rescis[aã]o\s+contratual|verbas?\s+rescis/i],
-  ['freelance',   /freelance|autonomo|pessoa\s+jur[ií]dica|honorarios|nota\s+fiscal|pgto\s+servico|pagamento\s+servico|prestacao\s+de\s+servico|mei\s+|recebimento\s+(de\s+)?honorario/i],
-  ['dividend',    /dividendo|jcp|juros\s+sobre\s+capital|rendimento\s+(cdb|lci|lca|poupan|tesouro|fundo|fi\s+|fii)|resgat[eo]\s+(cdb|lci|lca|fundo|invest)|rentabilidade/i],
-  ['dividend',    /poupan[çc]a|renda\s+fixa|juros\s+credita|credito\s+rendimento|rendimento\s+credita/i],
-  ['rent_income', /aluguel\s*(recebido|credit|locacao)|locac[aã]o\s+recebida|repasse\s+aluguel|renda\s+(de\s+)?aluguel/i],
-]
-
-// ─── Main function ─────────────────────────────────────────────────────────────
+// ─── Função principal ─────────────────────────────────────────────────────────
 
 export function autoCategory(description: string, isIncome: boolean): CategoryKey {
-  const d = description.trim()
+  const norm = prep(description)
+  const original = normalize(description) // também testa sem remover prefixo
 
+  // Para receitas, só testa regras de income
   if (isIncome) {
-    for (const [cat, re] of INCOME_RULES) {
-      if (re.test(d)) return cat
+    for (const [cat, re] of RULES) {
+      if (cat === 'salary' || cat === 'freelance' || cat === 'dividend' || cat === 'rent_income') {
+        if (re.test(norm) || re.test(original)) return cat
+      }
     }
     return 'other_income'
   }
 
-  for (const [cat, re] of EXPENSE_RULES) {
-    if (re.test(d)) return cat
+  // Para despesas, testa as demais regras
+  for (const [cat, re] of RULES) {
+    if (cat === 'salary' || cat === 'freelance' || cat === 'dividend' || cat === 'rent_income') continue
+    if (re.test(norm) || re.test(original)) return cat
   }
   return 'other'
 }
 
-// ─── History-aware inference (for AddTransactionModal) ────────────────────────
-// First tries transaction history, then falls back to keyword rules.
+// ─── Inferência com histórico (AddTransactionModal) ────────────────────────────
 
 export function inferCategoryFromHistory(
   description: string,
@@ -112,11 +280,11 @@ export function inferCategoryFromHistory(
   const lower = description.toLowerCase()
 
   if (history.length > 0) {
-    // Exact match
+    // Match exato
     const exact = history.find(h => h.description.toLowerCase() === lower)
     if (exact) return exact.category as CategoryKey
 
-    // Partial match — collect votes
+    // Match parcial com votação
     const matches = history.filter(h => {
       const hl = h.description.toLowerCase()
       return hl.includes(lower) || lower.includes(hl.slice(0, Math.max(4, Math.floor(hl.length * 0.6))))
@@ -124,14 +292,12 @@ export function inferCategoryFromHistory(
     if (matches.length > 0) {
       const votes = new Map<string, number>()
       matches.forEach(h => votes.set(h.category, (votes.get(h.category) || 0) + 1))
-      const winner = Array.from(votes.entries()).sort((a, b) => b[1] - a[1])[0]
-      return winner[0] as CategoryKey
+      return Array.from(votes.entries()).sort((a, b) => b[1] - a[1])[0][0] as CategoryKey
     }
   }
 
-  // Fallback to keyword rules
+  // Fallback para regras por palavra-chave
   const byKeyword = autoCategory(description, isIncome)
-  // Return null if it would just be the generic fallback (caller may prefer not to suggest)
   if (byKeyword === 'other' || byKeyword === 'other_income') return null
   return byKeyword
 }
