@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#FF6B35"/>
+  <!-- Chart bars -->
+  <rect x="96" y="300" width="72" height="140" rx="12" fill="white" opacity="0.35"/>
+  <rect x="196" y="220" width="72" height="220" rx="12" fill="white" opacity="0.6"/>
+  <rect x="296" y="160" width="72" height="280" rx="12" fill="white" opacity="0.8"/>
+  <!-- Trend line -->
+  <polyline points="132,300 232,220 332,160 420,100" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Dot at end -->
+  <circle cx="420" cy="100" r="18" fill="white"/>
+  <!-- Dollar sign -->
+  <text x="368" y="460" font-family="system-ui, sans-serif" font-weight="700" font-size="72" fill="white" opacity="0.25">R$</text>
+</svg>

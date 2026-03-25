@@ -1,5 +1,6 @@
 'use client'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Download, FileText, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { TransactionTable } from '@/components/transactions/TransactionTable'
 import { AddTransactionModal } from '@/components/transactions/AddTransactionModal'
@@ -21,7 +22,8 @@ import type { Database } from '@/lib/supabase/types'
 
 type Transaction = Database['public']['Tables']['transactions']['Row']
 
-export default function TransactionsPage() {
+function TransactionsContent() {
+  const searchParams = useSearchParams()
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth())
   const [year, setYear] = useState(now.getFullYear())
@@ -37,6 +39,11 @@ export default function TransactionsPage() {
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
   const [activeAccount, setActiveAccount] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  // Open modal from PWA shortcut (?new=1)
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setModalOpen(true)
+  }, [searchParams])
 
   // Keyboard shortcut N to open modal
   useEffect(() => {
@@ -271,5 +278,13 @@ export default function TransactionsPage() {
         loading={deleting}
       />
     </main>
+  )
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense>
+      <TransactionsContent />
+    </Suspense>
   )
 }
