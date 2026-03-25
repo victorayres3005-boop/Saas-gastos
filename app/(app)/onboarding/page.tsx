@@ -90,7 +90,7 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        <div className="bg-white rounded-xl border border-border p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 p-8 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
 
           {/* Step 0 — Boas-vindas */}
           {step === 0 && (
@@ -216,7 +216,7 @@ export default function OnboardingPage() {
                             className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
                             style={tx.category === key
                               ? { backgroundColor: cat.bg, color: cat.text, borderColor: 'transparent' }
-                              : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}>
+                              : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
                             {cat.label}
                           </button>
                         )

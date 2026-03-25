@@ -138,7 +138,7 @@ export default function AnalysisPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* Período */}
-          <div className="flex items-center gap-1 bg-white border border-border rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-bg-surface border border-accent/30 rounded-lg p-1">
             {([3, 6, 12] as const).map(p => (
               <button
                 key={p}
@@ -151,7 +151,7 @@ export default function AnalysisPage() {
           </div>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-border rounded-lg bg-white hover:bg-bg-page text-text-secondary transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-accent/30 rounded-lg bg-bg-surface hover:bg-bg-page text-text-secondary transition-colors"
           >
             <Download size={14} />
             Exportar CSV
@@ -161,17 +161,17 @@ export default function AnalysisPage() {
 
       {/* Métricas principais */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-2">Total Receitas</p>
           <p className="text-2xl font-bold text-positive">{formatCurrency(periodMetrics.totalReceitas)}</p>
           <p className="text-xs text-text-tertiary mt-1">Média: {formatCurrency(periodMetrics.avgReceitas)}/mês</p>
         </div>
-        <div className="bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-2">Total Despesas</p>
           <p className="text-2xl font-bold text-negative">{formatCurrency(periodMetrics.totalDespesas)}</p>
           <p className="text-xs text-text-tertiary mt-1">Média: {formatCurrency(periodMetrics.avgDespesas)}/mês</p>
         </div>
-        <div className="bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-2">Economia Líquida</p>
           <p className={`text-2xl font-bold ${periodMetrics.totalEconomia >= 0 ? 'text-positive' : 'text-negative'}`}>
             {formatCurrency(periodMetrics.totalEconomia)}
@@ -180,7 +180,7 @@ export default function AnalysisPage() {
             Taxa: {periodMetrics.taxaEconomia >= 0 ? periodMetrics.taxaEconomia.toFixed(1) : '0.0'}%
           </p>
         </div>
-        <div className="bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-2">Tendência Gastos</p>
           <div className="flex items-center gap-2">
             {periodMetrics.trend > 0 ? (
@@ -200,7 +200,7 @@ export default function AnalysisPage() {
 
       {/* Bar chart + previsão */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="lg:col-span-2 bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="lg:col-span-2 bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Receitas vs Despesas</p>
             {monthOverMonth && (
@@ -215,7 +215,7 @@ export default function AnalysisPage() {
         <div className="space-y-4">
           {/* Previsão */}
           {prediction && (
-            <div className="bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
               <div className="flex items-center gap-2 mb-3">
                 <Calendar size={14} className="text-accent" />
                 <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Previsão — {prediction.label}</p>
@@ -234,7 +234,7 @@ export default function AnalysisPage() {
           )}
 
           {/* Mês a mês */}
-          <div className="bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-3">Resumo Mensal</p>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {[...monthlyData].reverse().map(m => (
@@ -253,11 +253,11 @@ export default function AnalysisPage() {
 
       {/* Top categorias + donut */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-2 bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="lg:col-span-2 bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Distribuição por Categoria</p>
           <DonutChart data={topCategories} />
         </div>
-        <div className="lg:col-span-3 bg-white border border-border rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="lg:col-span-3 bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Top Categorias — Últimos {period} meses</p>
           {topCategories.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-sm text-text-tertiary">Sem dados para exibir</div>

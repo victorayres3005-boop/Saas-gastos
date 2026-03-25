@@ -205,7 +205,7 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
                     className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
                     style={category === key
                       ? { backgroundColor: cat.bg, color: cat.text, borderColor: 'transparent' }
-                      : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }
+                      : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }
                     }
                   >
                     {cat.label}
@@ -221,7 +221,7 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
                 <select
                   value={accountId}
                   onChange={e => setAccountId(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent bg-white"
+                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent bg-bg-surface"
                 >
                   <option value="">Nenhuma</option>
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}

@@ -23,8 +23,8 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white border border-[#E5E5E5] rounded-xl p-10 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="min-h-screen bg-bg-page flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-bg-surface border border-border rounded-xl p-10 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-2.5 mb-8">
           <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
             <span className="text-white font-bold text-sm">F</span>

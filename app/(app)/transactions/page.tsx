@@ -160,9 +160,9 @@ export default function TransactionsPage() {
           placeholder="Buscar..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="h-8 px-3 border border-border rounded-lg text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] w-48"
+          className="h-8 px-3 border border-accent/30 rounded-lg text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] w-48"
         />
-        <div className="flex items-center gap-1 h-8 border border-border rounded-lg bg-white px-1">
+        <div className="flex items-center gap-1 h-8 border border-accent/30 rounded-lg bg-bg-surface px-1">
           <button onClick={prevMonth} className="p-1 text-text-tertiary hover:text-text-primary transition-colors">
             <ChevronLeft size={15} />
           </button>
@@ -175,7 +175,7 @@ export default function TransactionsPage() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveCategory(null)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${!activeCategory ? 'bg-accent text-white border-accent' : 'border-border bg-white text-text-secondary hover:border-accent'}`}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${!activeCategory ? 'bg-accent text-white border-accent' : 'border-border bg-bg-surface text-text-secondary hover:border-accent'}`}
           >
             Todos
           </button>
@@ -184,7 +184,7 @@ export default function TransactionsPage() {
               key={cat}
               onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
               className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-              style={activeCategory === cat ? { backgroundColor: CATEGORIES[cat].bg, color: CATEGORIES[cat].text, borderColor: 'transparent' } : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}
+              style={activeCategory === cat ? { backgroundColor: CATEGORIES[cat].bg, color: CATEGORIES[cat].text, borderColor: 'transparent' } : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
             >
               {CATEGORIES[cat].label}
             </button>
@@ -195,7 +195,7 @@ export default function TransactionsPage() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setActiveAccount(null)}
-              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${!activeAccount ? 'bg-accent text-white border-accent' : 'border-border bg-white text-text-secondary hover:border-accent'}`}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${!activeAccount ? 'bg-accent text-white border-accent' : 'border-border bg-bg-surface text-text-secondary hover:border-accent'}`}
             >
               Todas as contas
             </button>
@@ -206,7 +206,7 @@ export default function TransactionsPage() {
                 className="px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1"
                 style={activeAccount === acc.id
                   ? { backgroundColor: acc.color, color: 'white', borderColor: acc.color }
-                  : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }
+                  : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }
                 }
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeAccount === acc.id ? 'white' : acc.color }} />
@@ -229,7 +229,7 @@ export default function TransactionsPage() {
               { label: 'Despesas', value: despesas, color: '#DC2626', bg: '#FEF2F2' },
               { label: 'Saldo',    value: saldo,    color: saldo >= 0 ? '#16A34A' : '#DC2626', bg: saldo >= 0 ? '#F0FDF4' : '#FEF2F2' },
             ].map(({ label, value, color, bg }) => (
-              <div key={label} className="rounded-xl border border-border p-4" style={{ backgroundColor: bg }}>
+              <div key={label} className="rounded-xl border border-accent/30 p-4" style={{ backgroundColor: bg }}>
                 <p className="text-xs text-text-tertiary mb-1">{label}</p>
                 <p className="text-base font-bold tabular-nums" style={{ color }}>
                   {label === 'Saldo' && saldo < 0 ? '-' : ''}{formatCurrency(Math.abs(value))}
@@ -242,7 +242,7 @@ export default function TransactionsPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="bg-white rounded-xl border border-border p-8 text-center text-sm text-text-tertiary">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 p-8 text-center text-sm text-text-tertiary">
           Carregando...
         </div>
       ) : (

@@ -207,7 +207,7 @@ export default function DashboardPage() {
                 className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                   activeCategories.has(cat)
                     ? 'border-transparent'
-                    : 'border-border bg-white text-text-secondary hover:border-accent'
+                    : 'border-border bg-bg-surface text-text-secondary hover:border-accent'
                 }`}
                 style={activeCategories.has(cat) ? { backgroundColor: CATEGORIES[cat].bg, color: CATEGORIES[cat].text, borderColor: 'transparent' } : {}}
               >
@@ -220,7 +220,7 @@ export default function DashboardPage() {
             <div className="flex gap-2 mt-4 flex-wrap">
               <button
                 onClick={() => setSelectedAccount(null)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${!selectedAccount ? 'bg-accent text-white border-accent' : 'border-border bg-white text-text-secondary hover:border-accent'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${!selectedAccount ? 'bg-accent text-white border-accent' : 'border-border bg-bg-surface text-text-secondary hover:border-accent'}`}
               >
                 Visão Geral
               </button>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                   className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5"
                   style={selectedAccount === acc.id
                     ? { backgroundColor: acc.color, color: 'white', borderColor: acc.color }
-                    : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }
+                    : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }
                   }
                 >
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedAccount === acc.id ? 'white' : acc.color }} />

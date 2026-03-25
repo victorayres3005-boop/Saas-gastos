@@ -10,7 +10,7 @@ export function TopBar({ onSearch }: TopBarProps) {
   const [query, setQuery] = useState('')
 
   return (
-    <div className="bg-white border-b border-border px-8 py-3 sticky top-0 z-20">
+    <div className="bg-bg-surface border-b border-border px-8 py-3 sticky top-0 z-20">
       <div className="relative max-w-md">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
         <input

@@ -129,15 +129,15 @@ export default function RecurringPage() {
 
       {/* Resumo */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-xs text-text-tertiary mb-1">Despesas/mês</p>
           <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(totalExpense)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-xs text-text-tertiary mb-1">Receitas/mês</p>
           <p className="text-lg font-bold text-green-600 tabular-nums">{formatCurrency(totalIncome)}</p>
         </div>
-        <div className="rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+        <div className="rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]"
           style={{ backgroundColor: totalMonthly >= 0 ? '#F0FDF4' : '#FEF2F2' }}>
           <p className="text-xs text-text-tertiary mb-1">Saldo mensal</p>
           <p className="text-lg font-bold tabular-nums" style={{ color: totalMonthly >= 0 ? '#16A34A' : '#DC2626' }}>
@@ -149,7 +149,7 @@ export default function RecurringPage() {
       {loading ? (
         <div className="text-center py-16 text-sm text-text-tertiary">Carregando...</div>
       ) : items.length === 0 ? (
-        <div className="bg-white rounded-xl border border-border py-16 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 py-16 text-center shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <RefreshCw size={32} className="mx-auto mb-3 text-text-tertiary" />
           <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma transação recorrente</p>
           <p className="text-xs text-text-tertiary mb-4">Adicione assinaturas, salário, aluguel e outros fixos</p>
@@ -158,7 +158,7 @@ export default function RecurringPage() {
           </Button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-border overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 overflow-hidden shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
@@ -175,7 +175,7 @@ export default function RecurringPage() {
               {items.map(item => {
                 const account = item.account_id ? accounts.find(a => a.id === item.account_id) : undefined
                 return (
-                  <tr key={item.id} className={`border-b border-border-light last:border-0 transition-colors hover:bg-[#FAFAFA] ${!item.active ? 'opacity-50' : ''}`}>
+                  <tr key={item.id} className={`border-b border-border-light last:border-0 transition-colors hover:bg-bg-page ${!item.active ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="text-sm font-medium text-text-primary">{item.description}</div>
                       <div className={`text-xs mt-0.5 font-medium ${item.active ? 'text-green-600' : 'text-text-tertiary'}`}>
@@ -220,7 +220,7 @@ export default function RecurringPage() {
         <form onSubmit={handleAdd} className="space-y-4">
 
           {/* Toggle Despesa / Receita */}
-          <div className="flex rounded-lg border border-border overflow-hidden">
+          <div className="flex rounded-lg border border-accent/30 overflow-hidden">
             <button type="button" onClick={() => setForm(f => ({ ...f, isIncome: false, category: EXPENSE_CATEGORIES[0] }))}
               className={`flex-1 py-2 text-sm font-medium transition-colors ${!form.isIncome ? 'bg-red-50 text-red-600 border-r border-border' : 'text-text-tertiary hover:bg-gray-50 border-r border-border'}`}>
               Despesa
@@ -248,7 +248,7 @@ export default function RecurringPage() {
                     className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
                     style={form.category === key
                       ? { backgroundColor: cat.bg, color: cat.text, borderColor: 'transparent' }
-                      : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}>
+                      : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
                     {cat.label}
                   </button>
                 )
@@ -265,7 +265,7 @@ export default function RecurringPage() {
                   className="flex-1 py-2 rounded-lg text-sm font-medium border transition-colors"
                   style={form.frequency === value
                     ? { backgroundColor: '#FFF0EB', color: '#C94A1A', borderColor: 'transparent' }
-                    : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}>
+                    : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
                   {label}
                 </button>
               ))}
@@ -277,7 +277,7 @@ export default function RecurringPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text-primary">Conta / Cartão (opcional)</label>
               <select value={form.account_id} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))}
-                className="w-full h-9 px-3 border border-border rounded-lg text-sm bg-white outline-none focus:border-accent">
+                className="w-full h-9 px-3 border border-accent/30 rounded-lg text-sm bg-bg-surface outline-none focus:border-accent">
                 <option value="">Sem conta específica</option>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>

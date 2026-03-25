@@ -136,7 +136,7 @@ function AccountForm({
               <button key={key} type="button" onClick={() => setBankCategory(key as BankCategory | 'all')}
                 style={{
                   flexShrink: 0, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap', cursor: 'pointer',
-                  border: active ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+                  border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
                   background: active ? '#FFF0EB' : 'transparent',
                   color: active ? '#C94A1A' : '#6B6B6B',
                   fontSize: 12, fontWeight: active ? 600 : 400,
@@ -151,7 +151,7 @@ function AccountForm({
             style={{
               flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: 6, padding: '10px 14px', borderRadius: 8, minWidth: 64, cursor: 'pointer',
-              border: !form.bank ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+              border: !form.bank ? '2px solid var(--accent)' : '1px solid var(--border)',
               background: !form.bank ? '#FFF0EB' : 'transparent',
             }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -168,7 +168,7 @@ function AccountForm({
                 style={{
                   flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
                   gap: 6, padding: '10px 14px', borderRadius: 8, minWidth: 64, cursor: 'pointer',
-                  border: selected ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+                  border: selected ? '2px solid var(--accent)' : '1px solid var(--border)',
                   background: selected ? '#FFF0EB' : 'transparent',
                 }}>
                 <BankLogo bankId={bank.id} size={32} />
@@ -191,7 +191,7 @@ function AccountForm({
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             style={{
               width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
-              border: '1px solid #E5E5E5', fontSize: 13, color: '#0A0A0A',
+              border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-primary)',
               outline: 'none', boxSizing: 'border-box', background: '#fff',
             }}
           />
@@ -204,7 +204,7 @@ function AccountForm({
             onChange={e => setForm(f => ({ ...f, balance: e.target.value }))}
             style={{
               width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
-              border: '1px solid #E5E5E5', fontSize: 13, color: '#0A0A0A',
+              border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-primary)',
               outline: 'none', boxSizing: 'border-box', background: '#fff',
             }}
           />
@@ -220,7 +220,7 @@ function AccountForm({
               <button key={value} type="button" onClick={() => onTypeChange(value as Account['type'])}
                 style={{
                   padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
-                  border: selected ? '2px solid #FF6B35' : '1px solid #E5E5E5',
+                  border: selected ? '2px solid var(--accent)' : '1px solid var(--border)',
                   background: selected ? '#FFF0EB' : 'transparent',
                   color: selected ? '#C94A1A' : '#6B6B6B',
                   fontWeight: selected ? 500 : 400,
@@ -428,11 +428,11 @@ export default function AccountsPage() {
       {/* Resumo geral */}
       {accounts.length > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
             <p className="text-xs text-text-tertiary mb-1">Saldo inicial total</p>
             <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(totalInitial)}</p>
           </div>
-          <div className="rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+          <div className="rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]"
             style={{ backgroundColor: totalEffective >= 0 ? '#F0FDF4' : '#FEF2F2' }}>
             <p className="text-xs text-text-tertiary mb-1">Saldo projetado total</p>
             <p className="text-lg font-bold tabular-nums" style={{ color: totalEffective >= 0 ? '#16A34A' : '#DC2626' }}>
@@ -445,7 +445,7 @@ export default function AccountsPage() {
       {loading ? (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-xl border border-border p-4 flex items-center gap-4">
+            <div key={i} className="bg-bg-surface rounded-xl border border-accent/30 p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl skeleton" />
               <div className="flex-1">
                 <div className="h-3.5 w-28 skeleton mb-2" />
@@ -456,7 +456,7 @@ export default function AccountsPage() {
           ))}
         </div>
       ) : accounts.length === 0 ? (
-        <div className="bg-white rounded-xl border border-border py-16 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 py-16 text-center shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <Wallet size={32} className="mx-auto mb-3 text-text-tertiary" />
           <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma conta cadastrada</p>
           <p className="text-xs text-text-tertiary mb-4">Adicione seus cartões e contas bancárias</p>
@@ -477,10 +477,10 @@ export default function AccountsPage() {
             const isExpanded = expandedAccount === account.id
 
             return (
-              <div key={account.id} className="bg-white rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+              <div key={account.id} className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)] overflow-hidden">
                 {/* Cabeçalho da conta */}
                 <div
-                  className="p-4 flex items-center gap-4 cursor-pointer hover:bg-[#FAFAFA] transition-colors"
+                  className="p-4 flex items-center gap-4 cursor-pointer hover:bg-bg-page transition-colors"
                   onClick={() => setExpandedAccount(isExpanded ? null : account.id)}
                 >
                   {account.bank ? (
@@ -542,7 +542,7 @@ export default function AccountsPage() {
 
                     {/* Recorrentes vinculadas */}
                     {accountRecurring.length > 0 && (
-                      <div className="px-4 py-3 border-b border-border bg-[#FAFAFA]">
+                      <div className="px-4 py-3 border-b border-border bg-bg-page">
                         <div className="flex items-center gap-2 mb-2">
                           <RefreshCw size={11} className="text-text-tertiary" />
                           <p className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">
@@ -577,12 +577,12 @@ export default function AccountsPage() {
                       </div>
                     ) : (
                       <div>
-                        <div className="px-4 py-2 border-b border-border bg-[#FAFAFA]">
+                        <div className="px-4 py-2 border-b border-border bg-bg-page">
                           <p className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Movimentos</p>
                         </div>
                         <div className="divide-y divide-border-light max-h-64 overflow-y-auto">
                           {accountTxs.slice(0, 20).map(tx => (
-                            <div key={tx.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#FAFAFA] transition-colors">
+                            <div key={tx.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-bg-page transition-colors">
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium text-text-primary truncate">{tx.description}</p>
                                 <p className="text-[10px] text-text-tertiary mt-0.5">{formatDate(tx.date)}</p>

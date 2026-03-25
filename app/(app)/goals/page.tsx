@@ -138,7 +138,7 @@ export default function GoalsPage() {
       </div>
 
       {/* Painel de taxas de mercado */}
-      <div className="bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
+      <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-6">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
             Taxas de mercado
@@ -197,7 +197,7 @@ export default function GoalsPage() {
       {loading ? (
         <div className="text-center py-16 text-sm text-text-tertiary">Carregando...</div>
       ) : goals.length === 0 ? (
-        <div className="bg-white rounded-xl border border-border py-16 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="bg-bg-surface rounded-xl border border-accent/30 py-16 text-center shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <Target size={32} className="mx-auto mb-3 text-text-tertiary" />
           <p className="text-sm font-medium text-text-secondary mb-1">Nenhuma meta criada</p>
           <p className="text-xs text-text-tertiary mb-4">Crie uma meta para acompanhar seus objetivos</p>
@@ -216,7 +216,7 @@ export default function GoalsPage() {
             const invLabel = INVESTMENT_TYPES.find(t => t.value === invType)?.label
 
             return (
-              <div key={goal.id} className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+              <div key={goal.id} className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: goal.color + '20' }}>
@@ -335,7 +335,7 @@ export default function GoalsPage() {
                   type="date"
                   value={form.start_date}
                   onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
-                  className="h-9 px-3 border border-border rounded-lg text-sm text-text-primary bg-white outline-none focus:border-accent transition-all"
+                  className="h-9 px-3 border border-accent/30 rounded-lg text-sm text-text-primary bg-bg-surface outline-none focus:border-accent transition-all"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -344,7 +344,7 @@ export default function GoalsPage() {
                   type="date"
                   value={form.deadline}
                   onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                  className="h-9 px-3 border border-border rounded-lg text-sm text-text-primary bg-white outline-none focus:border-accent transition-all"
+                  className="h-9 px-3 border border-accent/30 rounded-lg text-sm text-text-primary bg-bg-surface outline-none focus:border-accent transition-all"
                 />
               </div>
             </div>
@@ -371,7 +371,7 @@ export default function GoalsPage() {
                     className="flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors text-left"
                     style={selected
                       ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#166534' }
-                      : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}>
+                      : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
                     <div>
                       <span className="font-medium">{label}</span>
                       {desc && <span className="text-xs ml-1.5 opacity-60">{desc}</span>}
@@ -453,7 +453,7 @@ export default function GoalsPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text-primary">Debitar de (opcional)</label>
               <select value={depositAccountId} onChange={e => setDepositAccountId(e.target.value)}
-                className="w-full h-9 px-3 border border-border rounded-lg text-sm bg-white outline-none focus:border-accent">
+                className="w-full h-9 px-3 border border-accent/30 rounded-lg text-sm bg-bg-surface outline-none focus:border-accent">
                 <option value="">Sem conta específica</option>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>

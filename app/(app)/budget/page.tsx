@@ -88,7 +88,7 @@ export default function BudgetPage() {
       )}
 
       {/* Resumo */}
-      <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
+      <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-6">
         <div className="grid grid-cols-3 gap-4">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-1">Total Orçado</p>
@@ -108,7 +108,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Linhas de categoria */}
-      <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
         <div className="flex items-center justify-between mb-1 pb-2 border-b border-border">
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Categoria</span>
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary w-36 text-right">Limite Mensal</span>
