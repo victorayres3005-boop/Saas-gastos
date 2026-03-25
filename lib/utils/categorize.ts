@@ -15,6 +15,9 @@ function stripTxPrefix(s: string): string {
   return s
     // ── Itaú PAY (maquininha/link de pagamento) ──────────────────────────────
     .replace(/^pay\s+/i, '')
+    // ── Outros prefixos bancários ─────────────────────────────────────────────
+    .replace(/^(pgto|pgmt)\s+/i, '')
+    .replace(/^(cred|deb)\s+/i, '')
     // ── PIX ──────────────────────────────────────────────────────────────────
     .replace(/^pix\s+(transf\.?|transferencia|enviado|recebido|para|de|cred\.?|deb\.?|qrs?)\s*/i, '')
     .replace(/^dev\s+pix\s+/i, '')
@@ -96,6 +99,13 @@ const RULES: Rule[] = [
   // Restaurantes e cafeterias
   ['food', /\b(restaurante|rest\s+[a-z]|pizzaria|churrascaria|sushi|japanese|yakissoba|galinhada|cafeteria|cafe\s+[a-z]|sorveteria|sorvete|doceria|brigadeiro)\b/i],
 
+  // Nomes truncados comuns no Itaú PAY que são estabelecimentos de alimentação
+  // megam = Mega Matte (rede de chá/matte muito comum), dom m = restaurante Dom X
+  // polo = bar/café Polo, provi = Provisão/Provianda (mercadinho local)
+  // lifeb = LifeBev/similar (bebidas), kiko = restaurante/lanchonete Kiko
+  // nabel = panabel/nabele (padaria/lanche), simet = simetria (restaurante)
+  ['food', /\b(megam(at|te)?|mega\s*mat(te)?|dom\s+[a-z]|polo\s*[a-z]?|provi(s|an|and)?|lifeb(ev)?|kiko|nabel|simet|conce(it)?|empada|lojinha|lanchin|saborei|tempero|fogao|foguei|braza|brasi\w{1,4}\s+gril)\b/i],
+
   // Bebidas e conveniência
   ['food', /\b(cervejaria|distribuidora\s+beb|adega|ambev|heineken|conveniencia|7\s*eleven|am\s*pm)\b/i],
 
@@ -103,8 +113,8 @@ const RULES: Rule[] = [
 
   ['transport', /\b(uber\s+[a-z]|uber\*|99\s*(pop|taxi|moto|app)|indriver|cabify|buser|blablacar|taxi|taxista)\b/i],
 
-  // Postos — abreviados e por bandeira (PAY AUTO pode ser auto posto)
-  ['transport', /\b(auto\s*posto|posto\s+(de\s+)?gas|posto\s*(shell|ipiranga|petrobras|br\s*|esso|texaco|raizen|ale)|gasolina|combust|etanol|alcool\s+veic|diesel|arla|br\s+distribui|ipiranga\s+|shell\s+|vibra\s+|raizen)\b/i],
+  // Postos — abreviados e por bandeira; "auto" sozinho = auto posto (contexto PAY)
+  ['transport', /\b(auto\s*posto|auto\b|posto\s+(de\s+)?gas|posto\s*(shell|ipiranga|petrobras|br\s*|esso|texaco|raizen|ale)|gasolina|combust|etanol|alcool\s+veic|diesel|arla|br\s+distribui|ipiranga\s+|shell\s+|vibra\s+|raizen)\b/i],
 
   ['transport', /\b(pedagio|sem\s*parar|veloe|conectcar|taggy|autoban|ecorodovias)\b/i],
   ['transport', /\b(estacion(amento)?|parking|estapark|multipark)\b/i],
@@ -172,12 +182,21 @@ const RULES: Rule[] = [
 // Testa TODAS as regras independente de isIncome, para que "PAY DROGA" (entrada)
 // ainda seja categorizado como "health" mesmo sendo receita.
 
-export function autoCategory(description: string, isIncome: boolean): CategoryKey {
+export function autoCategory(description: string, isIncome: boolean, value?: number): CategoryKey {
   const norm = prep(description)
-  const full = normalize(description) // também testa sem remover prefixo
+  const full = normalize(description)
 
   for (const [cat, re] of RULES) {
     if (re.test(norm) || re.test(full)) return cat
+  }
+
+  // Tiebreaker por valor: PAY + valor pequeno → provavelmente alimentação
+  // PAY XXXXX que não bateu nenhuma regra mas valor < R$60 → food
+  if (!isIncome && value !== undefined) {
+    const abs = Math.abs(value)
+    const isPay = /^pay\s+/i.test(description.trim())
+    if (isPay && abs > 0 && abs <= 60) return 'food'
+    if (isPay && abs > 60 && abs <= 300) return 'leisure'
   }
 
   return isIncome ? 'other_income' : 'other'

@@ -79,7 +79,7 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
       } else {
         const enriched = result.transactions.map(t => ({
           ...t,
-          category: autoCategory(t.description, t.isIncome),
+          category: autoCategory(t.description, t.isIncome, Math.abs(t.value)),
         }))
         setRows(enriched)
         setStep('review-multi')
