@@ -59,8 +59,9 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
   }
 
   return (
-    <div className="bg-bg-surface rounded-xl border border-border overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-      <table className="w-full">
+    <div className="bg-bg-surface rounded-xl border border-accent/30 overflow-hidden shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[600px]">
         <thead>
           <tr className="border-b border-border bg-bg-page">
             {[
@@ -140,6 +141,7 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

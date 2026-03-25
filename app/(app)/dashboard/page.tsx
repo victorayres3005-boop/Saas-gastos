@@ -191,11 +191,11 @@ export default function DashboardPage() {
   const firstName = profile ? getFirstName(profile.full_name) : ''
 
   return (
-    <main className="p-8 min-h-screen">
+    <main className="p-4 md:p-8 min-h-screen">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary mb-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-1">
             Olá, <span className="text-accent">{firstName || '...'}</span>
           </h1>
           <p className="text-sm text-text-secondary">Visão consolidada dos seus gastos.</p>

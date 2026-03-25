@@ -130,25 +130,25 @@ export default function TransactionsPage() {
   }
 
   return (
-    <main className="p-8 min-h-screen">
-      <div className="flex items-center justify-between mb-6">
+    <main className="p-4 md:p-8 min-h-screen">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Transações</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Transações</h1>
           <p className="text-sm text-text-secondary mt-0.5">{transactions.length} registros encontrados</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="secondary" onClick={() => setCsvOpen(true)}>
-            <Upload size={16} /> Importar CSV
+            <Upload size={16} /> <span className="hidden sm:inline">Importar CSV</span>
           </Button>
           <Button variant="secondary" onClick={() => exportToCSV(filtered, `transacoes-${months[month]}-${year}`)}>
-            <Download size={16} /> Exportar CSV
+            <Download size={16} /> <span className="hidden sm:inline">Exportar CSV</span>
           </Button>
           <Button variant="secondary" onClick={handleExportPDF}>
-            <FileText size={16} /> Exportar PDF
+            <FileText size={16} /> <span className="hidden sm:inline">Exportar PDF</span>
           </Button>
           <PixImport accounts={accounts} onAdd={async (tx) => handleAdd([tx])} />
           <Button onClick={() => setModalOpen(true)}>
-            <Plus size={16} /> Nova transação
+            <Plus size={16} /> <span className="hidden sm:inline">Nova transação</span><span className="sm:hidden">Nova</span>
           </Button>
         </div>
       </div>
@@ -223,7 +223,7 @@ export default function TransactionsPage() {
         const despesas = filtered.filter(t => t.value > 0).reduce((s, t) => s + t.value, 0)
         const saldo = receitas - despesas
         return (
-          <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             {[
               { label: 'Receitas', value: receitas, color: '#16A34A', bg: '#F0FDF4' },
               { label: 'Despesas', value: despesas, color: '#DC2626', bg: '#FEF2F2' },

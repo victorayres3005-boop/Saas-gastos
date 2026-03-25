@@ -116,10 +116,10 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <main className="p-8 min-h-screen">
+      <main className="p-4 md:p-8 min-h-screen">
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-48 bg-border rounded" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Array(4).fill(0).map((_, i) => <div key={i} className="h-24 bg-border rounded-xl" />)}
           </div>
           <div className="h-72 bg-border rounded-xl" />
@@ -129,11 +129,11 @@ export default function AnalysisPage() {
   }
 
   return (
-    <main className="p-8 min-h-screen">
+    <main className="p-4 md:p-8 min-h-screen">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary mb-1">Análise Financeira</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-1">Análise Financeira</h1>
           <p className="text-sm text-text-secondary">Tendências, comparativos e previsões dos seus gastos.</p>
         </div>
         <div className="flex items-center gap-2">

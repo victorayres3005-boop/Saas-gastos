@@ -415,10 +415,10 @@ export default function AccountsPage() {
   const totalEffective = accounts.reduce((s, a) => s + getEffectiveBalance(a.id, a.balance), 0)
 
   return (
-    <main className="p-8 min-h-screen max-w-3xl">
+    <main className="p-4 md:p-8 min-h-screen max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Contas</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Contas</h1>
           <p className="text-sm text-text-secondary mt-0.5">Gerencie seus cartões e contas</p>
         </div>
         <Button onClick={() => { resetForm(); setModalOpen(true) }}>

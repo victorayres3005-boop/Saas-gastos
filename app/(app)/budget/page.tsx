@@ -60,9 +60,9 @@ export default function BudgetPage() {
   }
 
   return (
-    <main className="p-8 min-h-screen">
+    <main className="p-4 md:p-8 min-h-screen">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-text-primary">Orçamento</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Orçamento</h1>
         <p className="text-sm text-text-secondary mt-0.5">
           {now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
         </p>
@@ -89,7 +89,7 @@ export default function BudgetPage() {
 
       {/* Resumo */}
       <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-6">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-1">Total Orçado</p>
             <p className="text-2xl font-bold text-text-primary">{formatCurrency(totalBudgeted)}</p>

@@ -117,10 +117,10 @@ export default function RecurringPage() {
   }, 0)
 
   return (
-    <main className="p-8 min-h-screen">
+    <main className="p-4 md:p-8 min-h-screen">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Recorrentes</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Recorrentes</h1>
           <p className="text-sm text-text-secondary mt-0.5">Gastos fixos e assinaturas</p>
         </div>
         <Button onClick={() => { setForm(EMPTY_FORM); setModalOpen(true) }}>
@@ -129,7 +129,7 @@ export default function RecurringPage() {
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-xs text-text-tertiary mb-1">Despesas/mês</p>
           <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(totalExpense)}</p>
@@ -160,7 +160,8 @@ export default function RecurringPage() {
         </div>
       ) : (
         <div className="bg-bg-surface rounded-xl border border-accent/30 overflow-hidden shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Descrição</th>
@@ -213,6 +214,7 @@ export default function RecurringPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
