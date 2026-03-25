@@ -22,6 +22,11 @@ export async function middleware(req: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
+  // /auth/callback nunca deve ser interceptado — ele processa o código do OAuth
+  if (req.nextUrl.pathname.startsWith('/auth/callback')) {
+    return res
+  }
+
   const isAuthRoute =
     req.nextUrl.pathname.startsWith('/login') ||
     req.nextUrl.pathname.startsWith('/signup') ||
