@@ -54,17 +54,17 @@ export function BudgetRow({ category, spent, limit, recurringAmount = 0, onUpdat
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSave()}
-              className="w-28 h-7 px-2 border border-accent rounded-lg text-sm outline-none text-right"
+              className="w-28 h-7 px-2 border border-accent rounded-lg text-sm outline-none text-right focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] transition-all bg-bg-surface text-text-primary"
               autoFocus
             />
-            <button onClick={handleSave} className="text-positive hover:text-green-700">
-              <Check size={15} />
+            <button onClick={handleSave} className="w-6 h-6 flex items-center justify-center rounded-md text-positive hover:bg-positive-light transition-colors">
+              <Check size={14} />
             </button>
           </>
         ) : (
           <>
             <span className="text-sm font-medium text-text-primary">{formatCurrency(limit)}</span>
-            <button onClick={() => { setInputValue(limit.toString()); setEditing(true) }} className="text-text-tertiary hover:text-text-primary">
+            <button onClick={() => { setInputValue(limit.toString()); setEditing(true) }} className="w-6 h-6 flex items-center justify-center rounded-md text-text-tertiary hover:text-accent hover:bg-accent-light transition-colors">
               <Edit2 size={13} />
             </button>
           </>

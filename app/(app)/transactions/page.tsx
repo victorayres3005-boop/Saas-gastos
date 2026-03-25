@@ -183,7 +183,7 @@ export default function TransactionsPage() {
             <button
               key={cat}
               onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-              className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+              className="px-3 py-1 rounded-full text-xs font-medium border transition-all hover:border-accent/40 hover:text-text-primary"
               style={activeCategory === cat ? { backgroundColor: CATEGORIES[cat].bg, color: CATEGORIES[cat].text, borderColor: 'transparent' } : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
             >
               {CATEGORIES[cat].label}
@@ -203,7 +203,7 @@ export default function TransactionsPage() {
               <button
                 key={acc.id}
                 onClick={() => setActiveAccount(activeAccount === acc.id ? null : acc.id)}
-                className="px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1"
+                className="px-3 py-1 rounded-full text-xs font-medium border transition-all hover:border-accent/40 hover:text-text-primary flex items-center gap-1"
                 style={activeAccount === acc.id
                   ? { backgroundColor: acc.color, color: 'white', borderColor: acc.color }
                   : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }

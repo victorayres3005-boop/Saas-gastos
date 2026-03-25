@@ -72,7 +72,7 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
               <th
                 key={col.key}
                 onClick={() => handleSort(col.key)}
-                className="px-4 py-3 text-left text-xs font-semibold text-text-secondary cursor-pointer hover:text-text-primary select-none"
+                className="px-4 py-3 text-left text-xs font-semibold text-text-secondary cursor-pointer hover:text-text-primary select-none transition-colors"
               >
                 <span className="flex items-center">{col.label}<SortIcon col={col.key} /></span>
               </th>
@@ -84,7 +84,7 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
             )}
             <th
               onClick={() => handleSort('value')}
-              className="px-4 py-3 text-left text-xs font-semibold text-text-secondary cursor-pointer hover:text-text-primary select-none"
+              className="px-4 py-3 text-left text-xs font-semibold text-text-secondary cursor-pointer hover:text-text-primary select-none transition-colors"
             >
               <span className="flex items-center">Valor<SortIcon col="value" /></span>
             </th>
