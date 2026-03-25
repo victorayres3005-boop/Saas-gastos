@@ -2,21 +2,8 @@
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-
-const stripes = [
-  { left: '5%',  width: 48, opacity: 0.18 },
-  { left: '12%', width: 32, opacity: 0.25 },
-  { left: '20%', width: 64, opacity: 0.15 },
-  { left: '30%', width: 40, opacity: 0.22 },
-  { left: '40%', width: 56, opacity: 0.18 },
-  { left: '52%', width: 36, opacity: 0.28 },
-  { left: '62%', width: 72, opacity: 0.15 },
-  { left: '74%', width: 44, opacity: 0.20 },
-  { left: '84%', width: 30, opacity: 0.25 },
-  { left: '91%', width: 52, opacity: 0.18 },
-]
 
 function BrandIcon({ size = 28 }: { size?: number }) {
   return (
@@ -39,38 +26,124 @@ function GoogleIcon() {
   )
 }
 
+function MiniBarChart() {
+  const bars = [
+    { h: 40, color: '#FF6B35' },
+    { h: 65, color: '#FF6B35' },
+    { h: 50, color: '#FF6B35' },
+    { h: 80, color: '#FF6B35' },
+    { h: 55, color: '#3A3A3A' },
+    { h: 70, color: '#3A3A3A' },
+  ]
+  return (
+    <div className="flex items-end gap-1.5" style={{ height: 64 }}>
+      {bars.map((b, i) => (
+        <div
+          key={i}
+          className="rounded-sm flex-1"
+          style={{ height: `${b.h}%`, backgroundColor: b.color, opacity: i < 4 ? 0.9 : 0.4 }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function LeftPanel() {
   return (
     <div
-      className="hidden md:flex flex-col items-center justify-center relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #FDDCC4 0%, #FAC09A 50%, #F5A876 100%)' }}
+      className="hidden md:flex flex-col justify-between relative overflow-hidden p-10"
+      style={{ background: '#0D0D0D' }}
     >
-      {/* Listras verticais */}
-      {stripes.map((s, i) => (
-        <div
-          key={i}
-          className="absolute top-0 h-full rounded-sm"
-          style={{ left: s.left, width: s.width, backgroundColor: `rgba(255,255,255,${s.opacity})` }}
-        />
-      ))}
+      {/* Glow de fundo */}
+      <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at 50% 100%, rgba(255,107,53,0.18) 0%, transparent 70%)'
+      }} />
 
-      {/* Logo centralizado */}
-      <div className="relative z-10 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-3">
-          <BrandIcon size={48} />
-          <span style={{ fontSize: 32, fontWeight: 700, color: '#FF6B35', letterSpacing: '-0.02em' }}>
-            FinanceTrack
-          </span>
+      {/* Logo */}
+      <div className="relative z-10 flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#FF6B35', boxShadow: '0 4px 14px rgba(255,107,53,0.4)' }}>
+          <TrendingUp size={16} color="#fff" strokeWidth={2.5} />
         </div>
-        <p style={{ fontSize: 15, color: 'rgba(180,80,20,0.65)', marginTop: 8 }}>
-          Controle total das suas finanças
-        </p>
+        <span style={{ fontSize: 16, fontWeight: 700, color: '#F0F0F0', letterSpacing: '-0.01em' }}>FinanceTrack</span>
+      </div>
+
+      {/* Cards mockup centrais */}
+      <div className="relative z-10 flex flex-col gap-3">
+
+        {/* Card principal — saldo */}
+        <div className="rounded-2xl p-5" style={{
+          background: '#1A1A1A',
+          border: '1px solid #2A2A2A',
+          borderTop: '2px solid #FF6B35',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 500, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            Saldo Disponível
+          </p>
+          <p style={{ fontSize: 32, fontWeight: 700, color: '#F0F0F0', letterSpacing: '-0.02em', marginBottom: 12 }}>
+            R$ 12.480<span style={{ fontSize: 20, color: '#555' }}>,00</span>
+          </p>
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: 'rgba(22,163,74,0.15)', border: '1px solid rgba(22,163,74,0.25)' }}>
+              <ArrowUpRight size={11} color="#4ade80" />
+              <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>+8.4%</span>
+            </div>
+            <span style={{ fontSize: 11, color: '#555' }}>vs mês anterior</span>
+          </div>
+        </div>
+
+        {/* Mini cards lado a lado */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl p-4" style={{ background: '#1A1A1A', border: '1px solid #2A2A2A' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <TrendingUp size={12} color="#4ade80" />
+              <p style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Receitas</p>
+            </div>
+            <p style={{ fontSize: 18, fontWeight: 700, color: '#4ade80' }}>R$ 8.200</p>
+            <p style={{ fontSize: 10, color: '#555', marginTop: 2 }}>Este mês</p>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: '#1A1A1A', border: '1px solid #2A2A2A' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <TrendingDown size={12} color="#f87171" />
+              <p style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Despesas</p>
+            </div>
+            <p style={{ fontSize: 18, fontWeight: 700, color: '#f87171' }}>R$ 3.840</p>
+            <p style={{ fontSize: 10, color: '#555', marginTop: 2 }}>Este mês</p>
+          </div>
+        </div>
+
+        {/* Card gráfico */}
+        <div className="rounded-xl p-4" style={{ background: '#1A1A1A', border: '1px solid #2A2A2A' }}>
+          <div className="flex items-center justify-between mb-3">
+            <p style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Últimos 6 meses</p>
+            <span style={{ fontSize: 10, color: '#FF6B35', fontWeight: 600 }}>Despesas</span>
+          </div>
+          <MiniBarChart />
+        </div>
+
+        {/* Meta */}
+        <div className="rounded-xl p-4" style={{ background: '#1A1A1A', border: '1px solid #2A2A2A' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p style={{ fontSize: 11, color: '#888' }}>Meta — Reserva emergência</p>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#FF6B35' }}>68%</span>
+          </div>
+          <div className="rounded-full overflow-hidden" style={{ height: 6, background: '#2A2A2A' }}>
+            <div className="h-full rounded-full" style={{ width: '68%', background: 'linear-gradient(90deg, #FF6B35, #F5A876)' }} />
+          </div>
+          <div className="flex items-center justify-between mt-1.5">
+            <span style={{ fontSize: 10, color: '#555' }}>R$ 6.800</span>
+            <span style={{ fontSize: 10, color: '#555' }}>Meta: R$ 10.000</span>
+          </div>
+        </div>
       </div>
 
       {/* Tagline rodapé */}
-      <div className="absolute bottom-10 z-10 text-center" style={{ fontSize: 14 }}>
-        <span style={{ color: 'rgba(180,80,20,0.7)' }}>Construa algo grande, </span>
-        <span style={{ color: '#FF6B35', fontWeight: 600 }}>sem limites</span>
+      <div className="relative z-10">
+        <p style={{ fontSize: 13, color: '#444', marginBottom: 4 }}>
+          Controle total das suas finanças,{' '}
+          <span style={{ color: '#FF6B35', fontWeight: 600 }}>em um só lugar.</span>
+        </p>
+        <p style={{ fontSize: 11, color: '#333' }}>Mais de 1.000 usuários controlando seus gastos</p>
       </div>
     </div>
   )
