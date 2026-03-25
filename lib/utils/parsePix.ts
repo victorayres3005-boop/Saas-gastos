@@ -25,7 +25,7 @@ export type ParseResult =
   | { type: 'pix'; pix: ParsedPix }
   | { type: 'statement'; transactions: ParsedTransaction[] }
 
-// ─── Main PDF entry: calls API route which uses Claude for parsing ────────────
+// ─── Main PDF entry: extract text (server) then parse (client) ───────────────
 
 export async function parsePDFFile(file: File): Promise<ParseResult> {
   const formData = new FormData()
@@ -33,30 +33,9 @@ export async function parsePDFFile(file: File): Promise<ParseResult> {
   const res = await fetch('/api/parse-pix', { method: 'POST', body: formData })
   const json = await res.json()
   if (!res.ok) throw new Error(json.error ?? `Erro HTTP ${res.status}`)
-
-  // API returns structured data when Claude succeeds
-  if (json.type === 'statement' && Array.isArray(json.transactions)) {
-    return { type: 'statement', transactions: json.transactions as ParsedTransaction[] }
-  }
-  if (json.type === 'pix' && json.pix) {
-    return { type: 'pix', pix: json.pix as ParsedPix }
-  }
-
-  // Fallback: raw text returned (Claude unavailable) — use regex parsers
   const text = json.text as string
   if (!text) throw new Error('Resposta inesperada do servidor')
   return parseFromText(text)
-}
-
-// ─── Legacy text-only extraction (kept for fallback) ─────────────────────────
-
-export async function extractTextFromPDF(file: File): Promise<string> {
-  const formData = new FormData()
-  formData.append('file', file)
-  const res = await fetch('/api/parse-pix', { method: 'POST', body: formData })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error ?? `Erro HTTP ${res.status}`)
-  return (json.text ?? '') as string
 }
 
 // ─── Auto-detect document type ───────────────────────────────────────────────

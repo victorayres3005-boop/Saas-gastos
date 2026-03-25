@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['pdf-parse', '@anthropic-ai/sdk'],
+    serverComponentsExternalPackages: ['pdf-parse', 'pdf2json'],
   },
   images: {
     remotePatterns: [
