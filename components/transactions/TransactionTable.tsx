@@ -182,7 +182,7 @@ export function TransactionTable({
                   {isIncome ? '+' : '-'}{formatCurrency(Math.abs(tx.value))}
                 </td>
                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                  <div className={`flex items-center gap-1 transition-opacity ${hoveredId === tx.id ? 'opacity-100' : 'opacity-0'}`}>
+                  <div className={`flex items-center gap-1 transition-opacity opacity-100 sm:opacity-0 ${hoveredId === tx.id ? 'sm:opacity-100' : ''}`}>
                     <button
                       onClick={() => onEdit(tx)}
                       className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:text-accent hover:bg-accent-light transition-colors"

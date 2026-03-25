@@ -38,6 +38,7 @@ function TransactionsContent() {
   const [deleting, setDeleting] = useState(false)
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
   const [activeAccount, setActiveAccount] = useState<string | null>(null)
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
@@ -59,14 +60,22 @@ function TransactionsContent() {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
+  // Only show category chips that have at least one transaction this month
+  const activeMonthCategories = useMemo(() =>
+    (Object.keys(CATEGORIES) as CategoryKey[]).filter(k =>
+      transactions.some(t => t.category === k)
+    )
+  , [transactions])
+
   const filtered = useMemo(() => {
     return transactions.filter(t => {
       const matchCat = !activeCategory || t.category === activeCategory
       const matchSearch = !search || t.description.toLowerCase().includes(search.toLowerCase())
       const matchAccount = !activeAccount || t.account_id === activeAccount
-      return matchCat && matchSearch && matchAccount
+      const matchType = typeFilter === 'all' || (typeFilter === 'income' && t.value < 0) || (typeFilter === 'expense' && t.value > 0)
+      return matchCat && matchSearch && matchAccount && matchType
     })
-  }, [transactions, activeCategory, search, activeAccount])
+  }, [transactions, activeCategory, search, activeAccount, typeFilter])
 
   const handleDelete = async () => {
     if (!deletingId) return
@@ -162,7 +171,7 @@ function TransactionsContent() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Transações</h1>
-          <p className="text-sm text-text-secondary mt-0.5">{transactions.length} registros encontrados</p>
+          <p className="text-sm text-text-secondary mt-0.5">{filtered.length} de {transactions.length} transações</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="secondary" onClick={() => setCsvOpen(true)}>
@@ -199,7 +208,20 @@ function TransactionsContent() {
             <ChevronRight size={15} />
           </button>
         </div>
-        {/* Category chips */}
+        {/* Type filter */}
+        <div className="flex h-8 rounded-lg border border-accent/30 overflow-hidden bg-bg-surface">
+          {([['all', 'Todos'], ['income', 'Receitas'], ['expense', 'Despesas']] as const).map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setTypeFilter(val)}
+              className={`px-3 text-xs font-medium transition-colors border-r border-accent/30 last:border-r-0 ${typeFilter === val ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* Category chips — only categories present this month */}
+        {activeMonthCategories.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveCategory(null)}
@@ -207,7 +229,7 @@ function TransactionsContent() {
           >
             Todos
           </button>
-          {(Object.keys(CATEGORIES) as CategoryKey[]).map(cat => (
+          {activeMonthCategories.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
@@ -218,6 +240,7 @@ function TransactionsContent() {
             </button>
           ))}
         </div>
+        )}
         {/* Account chips */}
         {accounts.length > 0 && (
           <div className="flex gap-2 flex-wrap">
@@ -253,14 +276,14 @@ function TransactionsContent() {
         return (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             {[
-              { label: 'Receitas', value: receitas, color: '#16A34A', bg: '#F0FDF4' },
-              { label: 'Despesas', value: despesas, color: '#DC2626', bg: '#FEF2F2' },
-              { label: 'Saldo',    value: saldo,    color: saldo >= 0 ? '#16A34A' : '#DC2626', bg: saldo >= 0 ? '#F0FDF4' : '#FEF2F2' },
-            ].map(({ label, value, color, bg }) => (
+              { label: 'Receitas', value: receitas, color: '#16A34A', bg: '#F0FDF4', prefix: '+' },
+              { label: 'Despesas', value: despesas, color: '#DC2626', bg: '#FEF2F2', prefix: '-' },
+              { label: 'Saldo',    value: saldo,    color: saldo >= 0 ? '#16A34A' : '#DC2626', bg: saldo >= 0 ? '#F0FDF4' : '#FEF2F2', prefix: saldo > 0 ? '+' : saldo < 0 ? '-' : '' },
+            ].map(({ label, value, color, bg, prefix }) => (
               <div key={label} className="rounded-xl border border-accent/30 p-4" style={{ backgroundColor: bg }}>
                 <p className="text-xs text-text-tertiary mb-1">{label}</p>
                 <p className="text-base font-bold tabular-nums" style={{ color }}>
-                  {label === 'Saldo' && saldo < 0 ? '-' : ''}{formatCurrency(Math.abs(value))}
+                  {prefix}{formatCurrency(Math.abs(value))}
                 </p>
               </div>
             ))}
