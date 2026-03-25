@@ -118,7 +118,7 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
     return Math.abs(parseFloat(clean))
   }
 
-  function addTx(year: string, mm: string, dd: string, rawDesc: string, rawVal: string) {
+  function addTx(year: string, mm: string, dd: string, rawDesc: string, rawVal: string, isIncomeOverride?: boolean) {
     const date = `${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
 
     const isNeg = rawVal.trim().startsWith('-')
@@ -139,7 +139,9 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
     const key = `${date}|${absVal.toFixed(2)}|${description.slice(0, 15)}`
     if (seen.has(key)) return
     seen.add(key)
-    results.push({ date, description, value, isIncome: value < 0, selected: true })
+    // positive = credit (income), negative = debit (expense) — Brazilian bank convention
+    const isIncome = isIncomeOverride !== undefined ? isIncomeOverride : !isNeg
+    results.push({ date, description, value, isIncome, selected: true })
   }
 
   // Pick the transaction value from a pair [v0, v1] where one is likely the saldo
@@ -196,18 +198,17 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
       // Three values: possibly [debit, credit, saldo]
       const debit  = parseVal(vals[0])
       const credit = parseVal(vals[1])
-      let txVal: string
-      if (debit > 0 && credit === 0) {
-        txVal = vals[0]           // expense
-      } else if (credit > 0 && debit === 0) {
-        txVal = `-${vals[1]}`     // income
-      } else {
-        // Both columns populated → use pickTxFromPair on first two
-        txVal = pickTxFromPair(vals[0], vals[1]) ?? vals[0]
-      }
       const desc = rest
         .replace(vals[0], '').replace(vals[1], '').replace(vals[2], '').trim()
-      addTx(year, mm, dd, desc || 'Transação', txVal)
+      if (debit > 0 && credit === 0) {
+        addTx(year, mm, dd, desc || 'Transação', vals[0], false)   // expense
+      } else if (credit > 0 && debit === 0) {
+        addTx(year, mm, dd, desc || 'Transação', vals[1], true)    // income
+      } else {
+        // Both columns populated → use pickTxFromPair on first two
+        const txVal = pickTxFromPair(vals[0], vals[1]) ?? vals[0]
+        addTx(year, mm, dd, desc || 'Transação', txVal)
+      }
 
     } else {
       // 4+ values: pick the smallest non-zero value (most likely the transaction, not a running balance)
