@@ -195,7 +195,7 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-text-primary mb-1">
-            Olá, {firstName || '...'}
+            Olá, <span className="text-accent">{firstName || '...'}</span>
           </h1>
           <p className="text-sm text-text-secondary">Visão consolidada dos seus gastos.</p>
           {/* Category chips */}
@@ -242,13 +242,13 @@ export default function DashboardPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-white hover:bg-bg-page text-text-secondary">
+          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-page text-text-secondary hover:text-accent transition-colors">
             <ChevronLeft size={16} />
           </button>
-          <span className="text-sm font-medium text-text-primary capitalize min-w-[110px] text-center">
+          <span className="text-sm font-semibold text-accent capitalize min-w-[110px] text-center">
             {formatMonthYear(currentDate)}
           </span>
-          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-white hover:bg-bg-page text-text-secondary">
+          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-page text-text-secondary hover:text-accent transition-colors">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -256,7 +256,7 @@ export default function DashboardPage() {
 
       {/* Balance Overview */}
       {accounts.length > 0 && (
-        <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
+        <div className="bg-bg-surface rounded-xl border border-border border-t-2 border-t-accent p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-6">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
               {selectedAccount ? accounts.find(a => a.id === selectedAccount)?.name ?? 'Conta' : 'Saldo Geral'}
@@ -328,9 +328,12 @@ export default function DashboardPage() {
 
       {/* Recorrentes */}
       {activeRecurring.length > 0 && (
-        <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-8">
+        <div className="bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] mb-8">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Compromissos Recorrentes</p>
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-3.5 rounded-full bg-accent" />
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Compromissos Recorrentes</p>
+            </div>
             <span className="text-xs text-text-tertiary">{formatCurrency(recurringMonthlyExpense)}/mês em despesas fixas</span>
           </div>
           <div className="flex flex-col gap-2">
@@ -356,19 +359,28 @@ export default function DashboardPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Distribuição por Categoria</p>
+        <div className="lg:col-span-2 bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-1 h-3.5 rounded-full bg-accent" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Distribuição por Categoria</p>
+          </div>
           <DonutChart data={donutData} />
         </div>
-        <div className="lg:col-span-3 bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Últimos 6 Meses por Categoria</p>
+        <div className="lg:col-span-3 bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-1 h-3.5 rounded-full bg-accent" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Últimos 6 Meses por Categoria</p>
+          </div>
           <LineChart data={lineData} />
         </div>
       </div>
 
       {/* Heatmap */}
-      <div className="bg-white rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Atividade de Gastos {currentDate.getFullYear()}</p>
+      <div className="bg-bg-surface rounded-xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="w-1 h-3.5 rounded-full bg-accent" />
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Atividade de Gastos {currentDate.getFullYear()}</p>
+        </div>
         <ActivityHeatmap data={heatmapData} year={currentDate.getFullYear()} />
       </div>
     </main>
