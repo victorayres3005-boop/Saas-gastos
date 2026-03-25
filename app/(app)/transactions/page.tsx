@@ -242,8 +242,15 @@ export default function TransactionsPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="bg-bg-surface rounded-xl border border-accent/30 p-8 text-center text-sm text-text-tertiary">
-          Carregando...
+        <div className="bg-bg-surface rounded-xl border border-accent/30 overflow-hidden shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+          {Array(6).fill(0).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border last:border-0">
+              <div className="skeleton h-2.5 w-20 rounded flex-shrink-0" />
+              <div className="skeleton h-2.5 flex-1 rounded max-w-[180px]" />
+              <div className="skeleton h-5 w-20 rounded-full flex-shrink-0" />
+              <div className="skeleton h-2.5 w-24 rounded flex-shrink-0" />
+            </div>
+          ))}
         </div>
       ) : (
         <TransactionTable transactions={filtered} onDelete={setDeletingId} onEdit={setEditingTx} accounts={accounts} />

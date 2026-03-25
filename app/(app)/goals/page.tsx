@@ -12,6 +12,7 @@ import { addGoal, updateGoalProgress, deleteGoal } from '@/app/actions/goals'
 import { addTransaction } from '@/app/actions/transactions'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { GoalCardSkeleton } from '@/components/ui/Skeleton'
 import { formatCurrency } from '@/lib/utils/formatters'
 
 const GOAL_COLORS = ['#FF6B35', '#16A34A', '#2563EB', '#DB2777', '#D97706', '#7C3AED']
@@ -196,7 +197,9 @@ export default function GoalsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-sm text-text-tertiary">Carregando...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array(3).fill(0).map((_, i) => <GoalCardSkeleton key={i} />)}
+        </div>
       ) : goals.length === 0 ? (
         <div className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <EmptyState

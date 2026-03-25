@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react'
 import { MetricCard } from '@/components/ui/MetricCard'
-import { MetricCardSkeleton } from '@/components/ui/Skeleton'
+import { MetricCardSkeleton, BalanceCardSkeleton, ChartCardSkeleton } from '@/components/ui/Skeleton'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { LineChart } from '@/components/charts/LineChart'
 import { ActivityHeatmap } from '@/components/charts/ActivityHeatmap'
@@ -256,6 +256,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Balance Overview */}
+      {loading && accounts.length === 0 && <BalanceCardSkeleton />}
       {accounts.length > 0 && (
         <div className="bg-bg-surface rounded-xl border border-accent/30 border-t-2 border-t-accent p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)] mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -370,7 +371,13 @@ export default function DashboardPage() {
       )}
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
+      {loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
+          <div className="lg:col-span-2"><ChartCardSkeleton height={220} /></div>
+          <div className="lg:col-span-3"><ChartCardSkeleton height={220} /></div>
+        </div>
+      )}
+      {!loading && <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
         <div className="lg:col-span-2 bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1 h-3.5 rounded-full bg-accent" />
@@ -385,16 +392,21 @@ export default function DashboardPage() {
           </div>
           <LineChart data={lineData} />
         </div>
-      </div>
+      </div>}
 
       {/* Heatmap */}
-      <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-1 h-3.5 rounded-full bg-accent" />
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Atividade de Gastos {currentDate.getFullYear()}</p>
-        </div>
-        <ActivityHeatmap data={heatmapData} year={currentDate.getFullYear()} />
-      </div>
+      {loading
+        ? <ChartCardSkeleton height={120} />
+        : (
+          <div className="bg-bg-surface rounded-xl border border-accent/30 p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-1 h-3.5 rounded-full bg-accent" />
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Atividade de Gastos {currentDate.getFullYear()}</p>
+            </div>
+            <ActivityHeatmap data={heatmapData} year={currentDate.getFullYear()} />
+          </div>
+        )
+      }
     </main>
   )
 }

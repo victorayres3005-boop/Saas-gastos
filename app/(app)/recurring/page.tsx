@@ -11,6 +11,7 @@ import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { AccountBadge } from '@/components/ui/AccountBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { TableRowSkeleton } from '@/components/ui/Skeleton'
 import { addRecurring, deleteRecurring, toggleRecurring } from '@/app/actions/recurring'
 import { runRecurringProcessor } from '@/components/RecurringProcessor'
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
@@ -148,7 +149,9 @@ export default function RecurringPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-sm text-text-tertiary">Carregando...</div>
+        <div className="bg-bg-surface rounded-xl border border-accent/30 overflow-hidden shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
+          {Array(4).fill(0).map((_, i) => <TableRowSkeleton key={i} />)}
+        </div>
       ) : items.length === 0 ? (
         <div className="bg-bg-surface rounded-xl border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <EmptyState
