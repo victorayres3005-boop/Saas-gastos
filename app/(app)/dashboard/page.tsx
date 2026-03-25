@@ -2,7 +2,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { MetricCard } from '@/components/ui/MetricCard'
-import { TrendingDown, TrendingUp, Hash, Landmark } from 'lucide-react'
 import { MetricCardSkeleton } from '@/components/ui/Skeleton'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { LineChart } from '@/components/charts/LineChart'
@@ -319,10 +318,10 @@ export default function DashboardPage() {
           Array(4).fill(0).map((_, i) => <MetricCardSkeleton key={i} />)
         ) : (
           <>
-            <MetricCard label="Despesas" value={totalSpent} change={spentChange} variant="negative" icon={<TrendingDown size={14} />} />
-            <MetricCard label="Receitas" value={totalIncome} variant="positive" icon={<TrendingUp size={14} />} />
-            <MetricCard label="Investido" value={totalInvested} variant="warning" icon={<Landmark size={14} />} />
-            <MetricCard label="Transações" value={txCount} isCurrency={false} isCount variant="default" icon={<Hash size={14} />} />
+            <MetricCard label="Despesas" value={totalSpent} change={spentChange} />
+            <MetricCard label="Receitas" value={totalIncome} />
+            <MetricCard label="Investido" value={totalInvested} />
+            <MetricCard label="Transações" value={txCount} isCurrency={false} isCount />
           </>
         )}
       </div>
