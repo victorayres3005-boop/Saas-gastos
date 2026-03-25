@@ -1,118 +1,197 @@
 'use client'
 import { useState, useRef } from 'react'
-import { FileUp, X, Check, Loader2, AlertCircle, QrCode } from 'lucide-react'
+import { FileUp, X, Check, Loader2, AlertCircle, FileText, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
-import { CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
+import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
 import type { Account } from '@/lib/hooks/useAccounts'
-import { extractTextFromPDF, parsePixFromText, type ParsedPix } from '@/lib/utils/parsePix'
+import {
+  extractTextFromPDF, parseFromText,
+  type ParsedPix, type ParsedTransaction,
+} from '@/lib/utils/parsePix'
+
+type TxInput = {
+  description: string; value: number; category: CategoryKey
+  date: string; notes?: string; account_id?: string | null
+}
 
 interface PixImportProps {
   accounts: Account[]
-  onAdd: (tx: { description: string; value: number; category: CategoryKey; date: string; notes?: string; account_id?: string | null }) => Promise<{ error?: string }>
+  onAdd: (txs: TxInput[]) => Promise<{ error?: string }>
 }
 
-type Step = 'idle' | 'parsing' | 'review' | 'saving'
+type Step = 'idle' | 'parsing' | 'review-single' | 'review-multi' | 'saving'
 
-const CATEGORY_OPTIONS = Object.entries(CATEGORIES) as [CategoryKey, { label: string; bg: string; text: string }][]
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+function guessCategory(description: string, isIncome: boolean): CategoryKey {
+  if (isIncome) {
+    if (/sal[aá]rio|holerite|pagamento\s+de\s+sal/i.test(description)) return 'salary'
+    if (/freelance|servi[çc]o|projeto/i.test(description)) return 'freelance'
+    if (/dividendo|rendimento|juros|cdb|lci|lca|tesouro/i.test(description)) return 'dividend'
+    if (/aluguel\s+recebido/i.test(description)) return 'rent_income'
+    return 'other_income'
+  }
+  if (/ifood|delivery|restaurante|lanche|pizza|mc\s*don|burger|sushi|almo[çc]o|janta|padaria|supermercado|mercado|hortifruti|a[çc]ougue|feira/i.test(description)) return 'food'
+  if (/uber|99|t[aá]xi|gasolina|posto|combustível|estacion|ped[aá]gio|[oô]nibus|metr[oô]|passagem/i.test(description)) return 'transport'
+  if (/netflix|spotify|amazon|prime|disney|youtube|assinatura|streaming|apple\s*tv/i.test(description)) return 'saas'
+  if (/farm[aá]cia|m[eé]dico|sa[uú]de|hospital|consulta|rem[eé]dio|plano\s+de\s+sa[uú]de|odonto/i.test(description)) return 'health'
+  if (/academia|palestra|curso|educa[çc][aã]o|escola|universidade|faculdade/i.test(description)) return 'education'
+  if (/aluguel|condom[ií]nio|iptu|financiamento|moradia/i.test(description)) return 'housing'
+  if (/shopping|roupa|vestu[aá]rio|cal[çc]ado|moda|zara|c&a|renner/i.test(description)) return 'leisure'
+  if (/investimento|cdb|lci|lca|tesouro|a[çc][aã]o|fundo/i.test(description)) return 'invest'
+  return 'other'
+}
+
+const ALL_CATEGORIES = Object.entries(CATEGORIES) as [CategoryKey, typeof CATEGORIES[CategoryKey]][]
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function PixImport({ accounts, onAdd }: PixImportProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>('idle')
   const [isDragging, setIsDragging] = useState(false)
-  const [parsed, setParsed] = useState<ParsedPix | null>(null)
   const [error, setError] = useState('')
 
-  // Form fields (editáveis após extração)
+  // Account selected BEFORE upload (shared by both flows)
+  const [accountId, setAccountId] = useState<string>('')
+
+  // ── Single (pix/comprovante) state
+  const [pix, setPix] = useState<ParsedPix | null>(null)
   const [description, setDescription] = useState('')
   const [value, setValue] = useState('')
   const [date, setDate] = useState('')
-  const [category, setCategory] = useState<CategoryKey>('transport')
-  const [accountId, setAccountId] = useState<string>('')
+  const [category, setCategory] = useState<CategoryKey>('other')
   const [notes, setNotes] = useState('')
+
+  // ── Multi (extrato) state
+  const [rows, setRows] = useState<(ParsedTransaction & { category: CategoryKey })[]>([])
+  const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   const fileRef = useRef<HTMLInputElement>(null)
 
   const reset = () => {
-    setStep('idle'); setParsed(null); setError('')
-    setDescription(''); setValue(''); setDate('')
-    setCategory('transport'); setAccountId(''); setNotes('')
+    setStep('idle'); setPix(null); setError('')
+    setDescription(''); setValue(''); setDate(''); setNotes('')
+    setCategory('other'); setRows([]); setExpandedRow(null)
+    // Keep accountId so user doesn't re-select after a failed import
   }
+
+  const handleClose = () => { setOpen(false); reset(); setAccountId('') }
 
   const handleFile = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Apenas arquivos PDF são aceitos')
-      return
+      setError('Apenas arquivos PDF são aceitos'); return
     }
-    setError('')
-    setStep('parsing')
+    setError(''); setStep('parsing')
     try {
       const text = await extractTextFromPDF(file)
-      const result = parsePixFromText(text)
-      setParsed(result)
+      const result = parseFromText(text)
 
-      // Pré-preenche o formulário com o que foi extraído
-      setDescription(result.description)
-      setValue(result.value != null ? result.value.toFixed(2).replace('.', ',') : '')
-      setDate(result.date ?? new Date().toISOString().split('T')[0])
-      setNotes(result.time ? `Horário: ${result.time}` : '')
-      setStep('review')
+      if (result.type === 'pix') {
+        const p = result.pix
+        setPix(p)
+        setDescription(p.description)
+        setValue(p.value != null ? p.value.toFixed(2).replace('.', ',') : '')
+        setDate(p.date ?? new Date().toISOString().split('T')[0])
+        setNotes(p.time ? `Horário: ${p.time}` : '')
+        setCategory('other')
+        setStep('review-single')
+      } else {
+        const enriched = result.transactions.map(t => ({
+          ...t,
+          category: guessCategory(t.description, t.isIncome),
+        }))
+        setRows(enriched)
+        setStep('review-multi')
+      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setError(`Erro ao ler PDF: ${msg}`)
+      setError(`Erro ao ler PDF: ${err instanceof Error ? err.message : String(err)}`)
       setStep('idle')
     }
   }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault(); setIsDragging(false)
     const file = e.dataTransfer.files[0]
     if (file) handleFile(file)
   }
 
-  const handleConfirm = async () => {
-    const numericValue = parseFloat(value.replace(/\./g, '').replace(',', '.'))
+  // ── Save single
+  const handleSaveSingle = async () => {
+    const num = parseFloat(value.replace(/\./g, '').replace(',', '.'))
     if (!description.trim()) { setError('Informe a descrição'); return }
-    if (!numericValue || numericValue <= 0) { setError('Informe um valor válido'); return }
+    if (!num || num <= 0) { setError('Informe um valor válido'); return }
     if (!date) { setError('Informe a data'); return }
-
     setStep('saving')
-    const result = await onAdd({
-      description: description.trim(),
-      value: numericValue,
-      category,
-      date,
-      notes: notes || undefined,
-      account_id: accountId || null,
-    })
-    if (result.error) {
-      setError(result.error)
-      setStep('review')
-    } else {
-      setOpen(false)
-      reset()
-    }
+    const result = await onAdd([{
+      description: description.trim(), value: num, category, date,
+      notes: notes || undefined, account_id: accountId || null,
+    }])
+    if (result.error) { setError(result.error); setStep('review-single') }
+    else handleClose()
   }
 
-  const confidenceFields = parsed ? [
-    { label: 'Valor', ok: parsed.value != null },
-    { label: 'Destinatário', ok: parsed.recipient != null },
-    { label: 'Data', ok: parsed.date != null },
-    { label: 'Horário', ok: parsed.time != null },
-  ] : []
+  // ── Save multi
+  const handleSaveMulti = async () => {
+    const selected = rows.filter(r => r.selected)
+    if (selected.length === 0) { setError('Selecione ao menos uma transação'); return }
+    setStep('saving')
+    const txs: TxInput[] = selected.map(r => ({
+      description: r.description,
+      value: r.isIncome ? -Math.abs(r.value) : Math.abs(r.value),
+      category: r.category,
+      date: r.date,
+      account_id: accountId || null,
+    }))
+    const result = await onAdd(txs)
+    if (result.error) { setError(result.error); setStep('review-multi') }
+    else handleClose()
+  }
+
+  const updateRow = (i: number, patch: Partial<typeof rows[0]>) => {
+    setRows(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r))
+  }
+
+  const allSelected = rows.every(r => r.selected)
+  const selectedCount = rows.filter(r => r.selected).length
+
+  const isSaving = step === 'saving'
 
   return (
     <>
-      <Button variant="secondary" onClick={() => { reset(); setOpen(true) }}>
-        <QrCode size={16} /> Importar Pix
+      <Button variant="secondary" onClick={() => { reset(); setAccountId(''); setOpen(true) }}>
+        <FileText size={16} /> <span className="hidden sm:inline">Importar PDF</span>
       </Button>
 
-      <Modal isOpen={open} onClose={() => { setOpen(false); reset() }} title="Importar comprovante Pix" maxWidth="max-w-lg">
-
-        {/* ── STEP: idle / parsing ────────────────────────────────────── */}
+      <Modal
+        isOpen={open}
+        onClose={handleClose}
+        title={step === 'review-multi' ? `Extrato detectado — ${rows.length} transações` : 'Importar PDF'}
+        maxWidth={step === 'review-multi' ? 'max-w-3xl' : 'max-w-lg'}
+      >
+        {/* ── Account selector (always visible on idle/review) ─────────── */}
         {(step === 'idle' || step === 'parsing') && (
           <div className="flex flex-col gap-4">
+
+            {/* Account picker — before upload */}
+            {accounts.length > 0 && (
+              <div>
+                <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">
+                  Conta / Banco (selecione antes de enviar o PDF)
+                </label>
+                <select
+                  value={accountId}
+                  onChange={e => setAccountId(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-accent/40 text-sm outline-none focus:border-accent bg-bg-surface text-text-primary"
+                >
+                  <option value="">Nenhuma conta</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Drop zone */}
             <div
               onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
               onDragLeave={() => setIsDragging(false)}
@@ -125,18 +204,21 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
               {step === 'parsing' ? (
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 size={28} className="text-accent animate-spin" />
-                  <p className="text-sm font-medium text-text-secondary">Lendo o comprovante...</p>
+                  <p className="text-sm font-medium text-text-secondary">Lendo o PDF...</p>
+                  <p className="text-xs text-text-tertiary">Detectando tipo de documento</p>
                 </div>
               ) : (
                 <>
                   <FileUp size={28} className="mx-auto mb-3 text-text-tertiary" />
-                  <p className="text-sm font-semibold text-text-secondary">Arraste o comprovante Pix</p>
-                  <p className="text-xs text-text-tertiary mt-1">ou clique para selecionar o PDF</p>
+                  <p className="text-sm font-semibold text-text-secondary">Arraste o PDF aqui</p>
+                  <p className="text-xs text-text-tertiary mt-1">Comprovante Pix ou extrato mensal/semestral</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">ou <span className="text-accent">clique para selecionar</span></p>
                 </>
               )}
             </div>
             <input ref={fileRef} type="file" accept=".pdf" className="hidden"
               onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+
             {error && (
               <div className="flex items-center gap-2 text-negative text-sm">
                 <AlertCircle size={15} /> {error}
@@ -145,99 +227,84 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
           </div>
         )}
 
-        {/* ── STEP: review ────────────────────────────────────────────── */}
-        {step === 'review' && parsed && (
+        {/* ── REVIEW SINGLE (comprovante Pix) ──────────────────────────── */}
+        {(step === 'review-single' || (isSaving && pix)) && (
           <div className="flex flex-col gap-4">
-            {/* Confiança da extração */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-text-tertiary">Extraído:</span>
-              {confidenceFields.map(f => (
-                <span key={f.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  f.ok ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {f.ok ? '✓' : '–'} {f.label}
-                </span>
-              ))}
-            </div>
+            {/* Confidence badges */}
+            {pix && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-text-tertiary">Extraído:</span>
+                {[
+                  { label: 'Valor', ok: pix.value != null },
+                  { label: 'Destinatário', ok: pix.recipient != null },
+                  { label: 'Data', ok: pix.date != null },
+                  { label: 'Horário', ok: pix.time != null },
+                ].map(f => (
+                  <span key={f.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    f.ok ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {f.ok ? '✓' : '–'} {f.label}
+                  </span>
+                ))}
+              </div>
+            )}
 
-            {/* Descrição */}
+            {/* Description */}
             <div>
               <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Descrição</label>
-              <input
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent"
-                placeholder="Ex: Pix para João"
-              />
+              <input value={description} onChange={e => setDescription(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)]"
+                placeholder="Ex: Pix para João" />
             </div>
 
-            {/* Valor + Data */}
+            {/* Value + Date */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Valor (R$)</label>
-                <input
-                  value={value}
-                  onChange={e => setValue(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent"
-                  placeholder="0,00"
-                />
+                <input value={value} onChange={e => setValue(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)]"
+                  placeholder="0,00" />
               </div>
               <div>
                 <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Data</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent"
-                />
+                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)]" />
               </div>
             </div>
 
-            {/* Categoria */}
+            {/* Category chips */}
             <div>
               <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Categoria</label>
               <div className="flex flex-wrap gap-2">
-                {CATEGORY_OPTIONS.map(([key, cat]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setCategory(key)}
-                    className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                {ALL_CATEGORIES.map(([key, cat]) => (
+                  <button key={key} type="button" onClick={() => setCategory(key)}
+                    className="px-3 py-1 rounded-full text-xs font-medium border transition-all hover:border-accent/40"
                     style={category === key
                       ? { backgroundColor: cat.bg, color: cat.text, borderColor: 'transparent' }
                       : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }
-                    }
-                  >
-                    {cat.label}
-                  </button>
+                    }>{cat.label}</button>
                 ))}
               </div>
             </div>
 
-            {/* Conta */}
+            {/* Account */}
             {accounts.length > 0 && (
               <div>
-                <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Conta (opcional)</label>
-                <select
-                  value={accountId}
-                  onChange={e => setAccountId(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent bg-bg-surface"
-                >
+                <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Conta</label>
+                <select value={accountId} onChange={e => setAccountId(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent bg-bg-surface">
                   <option value="">Nenhuma</option>
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
             )}
 
-            {/* Notas */}
+            {/* Notes */}
             <div>
               <label className="text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5 block">Observações</label>
-              <input
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent"
-                placeholder="Ex: Horário: 14:30"
-              />
+              <input value={notes} onChange={e => setNotes(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-border text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)]"
+                placeholder="Ex: Horário: 14:30" />
             </div>
 
             {error && (
@@ -247,16 +314,179 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
             )}
 
             <div className="flex gap-2 pt-1">
-              <Button variant="secondary" className="flex-1" onClick={() => { reset(); }}>
-                <X size={14} /> Cancelar
+              <Button variant="secondary" className="flex-1" onClick={reset} disabled={isSaving}>
+                <X size={14} /> Voltar
               </Button>
-              <Button className="flex-1" onClick={handleConfirm}>
+              <Button className="flex-1" onClick={handleSaveSingle} loading={isSaving} loadingText="Salvando...">
                 <Check size={14} /> Salvar transação
               </Button>
             </div>
           </div>
         )}
 
+        {/* ── REVIEW MULTI (extrato) ────────────────────────────────────── */}
+        {(step === 'review-multi' || (isSaving && rows.length > 0)) && (
+          <div className="flex flex-col gap-3">
+
+            {/* Account + summary row */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {accounts.length > 0 && (
+                <select value={accountId} onChange={e => setAccountId(e.target.value)}
+                  className="h-8 px-2 rounded-lg border border-accent/40 text-xs outline-none focus:border-accent bg-bg-surface text-text-primary">
+                  <option value="">Sem conta</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              )}
+              <span className="text-xs text-text-tertiary ml-auto">
+                {selectedCount} de {rows.length} selecionadas
+              </span>
+              <button
+                onClick={() => setRows(prev => prev.map(r => ({ ...r, selected: !allSelected })))}
+                className="text-xs font-medium text-accent hover:opacity-80 transition-opacity"
+              >
+                {allSelected ? 'Desmarcar todas' : 'Selecionar todas'}
+              </button>
+            </div>
+
+            {rows.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-text-secondary font-medium">Nenhuma transação detectada</p>
+                <p className="text-xs text-text-tertiary mt-1">O PDF pode estar em formato não suportado ou protegido por senha.</p>
+              </div>
+            ) : (
+              <div className="max-h-[420px] overflow-y-auto border border-border rounded-xl divide-y divide-border-light">
+                {/* Table header */}
+                <div className="sticky top-0 bg-bg-page grid grid-cols-[20px_72px_1fr_100px_90px] gap-2 px-3 py-2">
+                  <span />
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Data</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Descrição</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Categoria</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary text-right">Valor</span>
+                </div>
+
+                {rows.map((row, i) => (
+                  <div key={i} className={`transition-colors ${row.selected ? '' : 'opacity-40'}`}>
+                    {/* Main row */}
+                    <div className="grid grid-cols-[20px_72px_1fr_100px_90px] gap-2 items-center px-3 py-2 hover:bg-bg-page transition-colors">
+                      {/* Checkbox */}
+                      <input type="checkbox" checked={row.selected}
+                        onChange={() => updateRow(i, { selected: !row.selected })}
+                        className="w-3.5 h-3.5 accent-accent cursor-pointer" />
+
+                      {/* Date */}
+                      <span className="text-xs text-text-tertiary tabular-nums">
+                        {row.date.split('-').reverse().join('/')}
+                      </span>
+
+                      {/* Description + expand button */}
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-xs text-text-primary truncate flex-1">{row.description}</span>
+                        <button
+                          onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                          className="text-text-tertiary hover:text-accent transition-colors flex-shrink-0 p-0.5"
+                        >
+                          <ChevronDown size={12} className={`transition-transform ${expandedRow === i ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+
+                      {/* Category mini badge */}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium truncate"
+                        style={{ backgroundColor: CATEGORIES[row.category].bg, color: CATEGORIES[row.category].text }}>
+                        {CATEGORIES[row.category].label}
+                      </span>
+
+                      {/* Value + income toggle */}
+                      <div className="flex items-center gap-1 justify-end">
+                        <button
+                          onClick={() => updateRow(i, { isIncome: !row.isIncome })}
+                          className={`text-[10px] font-bold w-4 flex-shrink-0 transition-colors ${row.isIncome ? 'text-green-600' : 'text-red-500'}`}
+                          title="Clique para alternar entrada/saída"
+                        >
+                          {row.isIncome ? '+' : '−'}
+                        </button>
+                        <span className={`text-xs font-semibold tabular-nums ${row.isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                          {Math.abs(row.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Expanded editor */}
+                    {expandedRow === i && (
+                      <div className="px-3 pb-3 bg-bg-page border-t border-border-light">
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-text-tertiary mb-1 block">Descrição</label>
+                            <input value={row.description}
+                              onChange={e => updateRow(i, { description: e.target.value })}
+                              className="w-full h-7 px-2 text-xs rounded-lg border border-border outline-none focus:border-accent bg-bg-surface" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-text-tertiary mb-1 block">Data</label>
+                            <input type="date" value={row.date}
+                              onChange={e => updateRow(i, { date: e.target.value })}
+                              className="w-full h-7 px-2 text-xs rounded-lg border border-border outline-none focus:border-accent bg-bg-surface" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-text-tertiary mb-1 block">Valor (R$)</label>
+                            <input type="number" step="0.01" value={Math.abs(row.value)}
+                              onChange={e => updateRow(i, { value: parseFloat(e.target.value) || 0 })}
+                              className="w-full h-7 px-2 text-xs rounded-lg border border-border outline-none focus:border-accent bg-bg-surface" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-text-tertiary mb-1 block">Tipo</label>
+                            <div className="flex rounded-lg border border-border overflow-hidden h-7">
+                              <button type="button"
+                                onClick={() => updateRow(i, { isIncome: false })}
+                                className={`flex-1 text-xs font-medium transition-colors ${!row.isIncome ? 'bg-red-50 text-red-600' : 'text-text-tertiary hover:bg-bg-page'}`}>
+                                Saída
+                              </button>
+                              <button type="button"
+                                onClick={() => updateRow(i, { isIncome: true })}
+                                className={`flex-1 text-xs font-medium transition-colors ${row.isIncome ? 'bg-green-50 text-green-600' : 'text-text-tertiary hover:bg-bg-page'}`}>
+                                Entrada
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Category chips */}
+                        <div className="mt-2">
+                          <label className="text-[10px] uppercase tracking-wide text-text-tertiary mb-1 block">Categoria</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(row.isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(key => (
+                              <button key={key} type="button" onClick={() => updateRow(i, { category: key })}
+                                className="px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all"
+                                style={row.category === key
+                                  ? { backgroundColor: CATEGORIES[key].bg, color: CATEGORIES[key].text, borderColor: 'transparent' }
+                                  : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }
+                                }>{CATEGORIES[key].label}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-center gap-2 text-negative text-sm">
+                <AlertCircle size={15} /> {error}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <Button variant="secondary" className="flex-1" onClick={reset} disabled={isSaving}>
+                <X size={14} /> Voltar
+              </Button>
+              <Button className="flex-1" onClick={handleSaveMulti}
+                loading={isSaving} loadingText={`Importando ${selectedCount}...`}
+                disabled={selectedCount === 0}>
+                <Check size={14} /> Importar {selectedCount > 0 ? `${selectedCount} ` : ''}transaç{selectedCount === 1 ? 'ão' : 'ões'}
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   )

@@ -146,7 +146,7 @@ export default function TransactionsPage() {
           <Button variant="secondary" onClick={handleExportPDF}>
             <FileText size={16} /> <span className="hidden sm:inline">Exportar PDF</span>
           </Button>
-          <PixImport accounts={accounts} onAdd={async (tx) => handleAdd([tx])} />
+          <PixImport accounts={accounts} onAdd={handleAdd} />
           <Button onClick={() => setModalOpen(true)}>
             <Plus size={16} /> <span className="hidden sm:inline">Nova transação</span><span className="sm:hidden">Nova</span>
           </Button>
