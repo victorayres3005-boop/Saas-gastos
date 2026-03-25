@@ -46,14 +46,17 @@ export function useTransactions(month?: number, year?: number) {
     if (!user) return { error: 'Not authenticated' }
     const insert: TransactionInsert = { ...tx, user_id: user.id }
     const { error } = await supabase.from('transactions').insert(insert as Transaction)
-    if (!error) fetchTransactions()
+    if (!error) window.dispatchEvent(new Event('fintrack:transactions-updated'))
     return { error: error?.message }
   }
 
   const deleteTransaction = async (id: string) => {
     const supabase = createClient()
     const { error } = await supabase.from('transactions').delete().eq('id', id)
-    if (!error) setTransactions(prev => prev.filter(t => t.id !== id))
+    if (!error) {
+      setTransactions(prev => prev.filter(t => t.id !== id))
+      window.dispatchEvent(new Event('fintrack:transactions-updated'))
+    }
     return { error: error?.message }
   }
 
@@ -61,7 +64,10 @@ export function useTransactions(month?: number, year?: number) {
     if (ids.length === 0) return { error: undefined }
     const supabase = createClient()
     const { error } = await supabase.from('transactions').delete().in('id', ids)
-    if (!error) setTransactions(prev => prev.filter(t => !ids.includes(t.id)))
+    if (!error) {
+      setTransactions(prev => prev.filter(t => !ids.includes(t.id)))
+      window.dispatchEvent(new Event('fintrack:transactions-updated'))
+    }
     return { error: error?.message }
   }
 
@@ -71,7 +77,7 @@ export function useTransactions(month?: number, year?: number) {
     if (!user) return { error: 'Not authenticated' }
     const rows = txs.map(t => ({ ...t, user_id: user.id })) as Transaction[]
     const { error } = await supabase.from('transactions').insert(rows)
-    if (!error) fetchTransactions()
+    if (!error) window.dispatchEvent(new Event('fintrack:transactions-updated'))
     return { error: error?.message }
   }
 

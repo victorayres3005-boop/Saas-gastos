@@ -124,8 +124,12 @@ function TransactionsContent() {
 
   const handleEdit = async (id: string, data: { description: string; value: number; category: CategoryKey; date: string; notes?: string | null; account_id?: string | null }) => {
     const result = await updateTransaction(id, data)
-    if (!result.error) showToast('Transação atualizada!')
-    else showToast('Erro ao atualizar', 'error')
+    if (!result.error) {
+      showToast('Transação atualizada!')
+      window.dispatchEvent(new Event('fintrack:transactions-updated'))
+    } else {
+      showToast('Erro ao atualizar', 'error')
+    }
     return result
   }
 
