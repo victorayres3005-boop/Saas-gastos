@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
+import { inferCategoryFromHistory } from '@/lib/utils/categorize'
 import { useTemplates } from '@/lib/hooks/useTemplates'
 import { createClient } from '@/lib/supabase/client'
 import type { Account } from '@/lib/hooks/useAccounts'
@@ -16,30 +17,6 @@ interface AddTransactionModalProps {
   accounts?: Account[]
 }
 
-// Auto-category: looks for description match in history
-function inferCategory(
-  description: string,
-  history: { description: string; category: string }[]
-): CategoryKey | null {
-  if (description.length < 3 || history.length === 0) return null
-  const lower = description.toLowerCase().trim()
-
-  // 1. Exact match
-  const exact = history.find(h => h.description.toLowerCase() === lower)
-  if (exact) return exact.category as CategoryKey
-
-  // 2. Contains match — collect category votes
-  const matches = history.filter(h => {
-    const hl = h.description.toLowerCase()
-    return hl.includes(lower) || lower.includes(hl.slice(0, Math.max(4, Math.floor(hl.length * 0.6))))
-  })
-  if (matches.length === 0) return null
-
-  const votes = new Map<string, number>()
-  matches.forEach(h => votes.set(h.category, (votes.get(h.category) || 0) + 1))
-  const winner = Array.from(votes.entries()).sort((a, b) => b[1] - a[1])[0]
-  return winner[0] as CategoryKey
-}
 
 export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: AddTransactionModalProps) {
   const { templates, save: saveTemplate, remove: removeTemplate } = useTemplates()
@@ -83,7 +60,7 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
     setSuggestionDismissed(false)
     if (description.length < 3) { setAutoSuggestion(null); return }
     debounceRef.current = setTimeout(() => {
-      const suggested = inferCategory(description, history)
+      const suggested = inferCategoryFromHistory(description, history, isIncome)
       if (suggested && suggested !== category) {
         setAutoSuggestion(suggested)
       } else {

@@ -9,6 +9,7 @@ import {
   parsePDFFile,
   type ParsedPix, type ParsedTransaction,
 } from '@/lib/utils/parsePix'
+import { autoCategory } from '@/lib/utils/categorize'
 
 type TxInput = {
   description: string; value: number; category: CategoryKey
@@ -21,27 +22,6 @@ interface PixImportProps {
 }
 
 type Step = 'idle' | 'parsing' | 'review-single' | 'review-multi' | 'saving'
-
-// ─── helpers ────────────────────────────────────────────────────────────────
-
-function guessCategory(description: string, isIncome: boolean): CategoryKey {
-  if (isIncome) {
-    if (/sal[aá]rio|holerite|pagamento\s+de\s+sal/i.test(description)) return 'salary'
-    if (/freelance|servi[çc]o|projeto/i.test(description)) return 'freelance'
-    if (/dividendo|rendimento|juros|cdb|lci|lca|tesouro/i.test(description)) return 'dividend'
-    if (/aluguel\s+recebido/i.test(description)) return 'rent_income'
-    return 'other_income'
-  }
-  if (/ifood|delivery|restaurante|lanche|pizza|mc\s*don|burger|sushi|almo[çc]o|janta|padaria|supermercado|mercado|hortifruti|a[çc]ougue|feira/i.test(description)) return 'food'
-  if (/uber|99|t[aá]xi|gasolina|posto|combustível|estacion|ped[aá]gio|[oô]nibus|metr[oô]|passagem/i.test(description)) return 'transport'
-  if (/netflix|spotify|amazon|prime|disney|youtube|assinatura|streaming|apple\s*tv/i.test(description)) return 'saas'
-  if (/farm[aá]cia|m[eé]dico|sa[uú]de|hospital|consulta|rem[eé]dio|plano\s+de\s+sa[uú]de|odonto/i.test(description)) return 'health'
-  if (/academia|palestra|curso|educa[çc][aã]o|escola|universidade|faculdade/i.test(description)) return 'education'
-  if (/aluguel|condom[ií]nio|iptu|financiamento|moradia/i.test(description)) return 'housing'
-  if (/shopping|roupa|vestu[aá]rio|cal[çc]ado|moda|zara|c&a|renner/i.test(description)) return 'leisure'
-  if (/investimento|cdb|lci|lca|tesouro|a[çc][aã]o|fundo/i.test(description)) return 'invest'
-  return 'other'
-}
 
 const ALL_CATEGORIES = Object.entries(CATEGORIES) as [CategoryKey, typeof CATEGORIES[CategoryKey]][]
 
@@ -99,7 +79,7 @@ export function PixImport({ accounts, onAdd }: PixImportProps) {
       } else {
         const enriched = result.transactions.map(t => ({
           ...t,
-          category: guessCategory(t.description, t.isIncome),
+          category: autoCategory(t.description, t.isIncome),
         }))
         setRows(enriched)
         setStep('review-multi')
