@@ -38,8 +38,16 @@ export default function DashboardPage() {
       setAllTransactions((data as Transaction[]) || [])
     }
     fetchAll()
-    window.addEventListener('fintrack:transactions-updated', fetchAll)
-    return () => window.removeEventListener('fintrack:transactions-updated', fetchAll)
+    const onEvent = () => fetchAll()
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAll() }
+    window.addEventListener('fintrack:transactions-updated', onEvent)
+    window.addEventListener('fintrack:accounts-updated', onEvent)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('fintrack:transactions-updated', onEvent)
+      window.removeEventListener('fintrack:accounts-updated', onEvent)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   useEffect(() => {
@@ -93,17 +101,6 @@ export default function DashboardPage() {
   , [accounts])
 
 
-  // Recorrentes sem transação este mês (processor não rodou ou falhou)
-  const uncoveredRecurring = useMemo(() => {
-    const thisMonth = new Date().toISOString().slice(0, 7)
-    return activeRecurring.reduce((s, r) => {
-      const hasTx = allTransactions.some(t =>
-        t.date.startsWith(thisMonth) && t.value === r.value && t.description === r.description
-      )
-      return hasTx ? s : s + r.value
-    }, 0)
-  }, [activeRecurring, allTransactions])
-
   // Valores filtrados por conta selecionada (para o Balance card)
   const accountForBalance = useMemo(() =>
     selectedAccount ? accounts.find(a => a.id === selectedAccount) : null
@@ -117,21 +114,9 @@ export default function DashboardPage() {
   const displaySpentAllTime = accountTxsAllTime.reduce((s, t) => s + t.value, 0)
   const displayExpenseAllTime = accountTxsAllTime.filter(t => t.value > 0).reduce((s, t) => s + t.value, 0)
 
-  const accountUncoveredRecurring = useMemo(() => {
-    if (!selectedAccount) return uncoveredRecurring
-    const thisMonth = new Date().toISOString().slice(0, 7)
-    return activeRecurring
-      .filter(r => r.account_id === selectedAccount)
-      .reduce((s, r) => {
-        const hasTx = allTransactions.some(t =>
-          t.date.startsWith(thisMonth) && t.value === r.value && t.description === r.description
-        )
-        return hasTx ? s : s + r.value
-      }, 0)
-  }, [activeRecurring, allTransactions, selectedAccount, uncoveredRecurring])
 
-  // Saldo disponível = saldo inicial - transações - recorrentes sem transação este mês
-  const availableBalance = displayBalance - displaySpentAllTime - accountUncoveredRecurring
+  // Saldo disponível = saldo inicial - transações realizadas (recorrentes são previsões, não deduzidos aqui)
+  const availableBalance = displayBalance - displaySpentAllTime
   const spentPercent = displayBalance > 0 ? Math.min((displayExpenseAllTime / displayBalance) * 100, 100) : 0
 
   // Metrics mensais
