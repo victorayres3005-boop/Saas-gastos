@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -17,7 +17,7 @@ function GoogleIcon() {
   )
 }
 
-export function LoginForm() {
+function LoginFormInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const oauthError = searchParams.get('error') === 'oauth'
@@ -113,5 +113,13 @@ export function LoginForm() {
         </p>
       </div>
     </div>
+  )
+}
+
+export function LoginForm() {
+  return (
+    <Suspense fallback={null}>
+      <LoginFormInner />
+    </Suspense>
   )
 }

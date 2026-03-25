@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 interface AvatarProps {
   name: string
   imageUrl?: string | null
@@ -7,12 +9,15 @@ interface AvatarProps {
 export function Avatar({ name, imageUrl, size = 'md' }: AvatarProps) {
   const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
   const sizes = { sm: 'w-7 h-7 text-xs', md: 'w-8 h-8 text-sm', lg: 'w-14 h-14 text-lg' }
+  const px = { sm: 28, md: 32, lg: 56 }
 
   if (imageUrl) {
     return (
-      <img
+      <Image
         src={imageUrl}
         alt={name}
+        width={px[size]}
+        height={px[size]}
         className={`${sizes[size]} rounded-full object-cover flex-shrink-0`}
       />
     )
