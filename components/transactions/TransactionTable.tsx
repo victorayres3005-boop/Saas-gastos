@@ -17,12 +17,24 @@ interface TransactionTableProps {
   onDelete: (id: string) => void
   onEdit: (tx: Transaction) => void
   accounts?: Account[]
+  selectedIds?: Set<string>
+  onSelectionChange?: (ids: Set<string>) => void
 }
 
-export function TransactionTable({ transactions, onDelete, onEdit, accounts = [] }: TransactionTableProps) {
+export function TransactionTable({
+  transactions,
+  onDelete,
+  onEdit,
+  accounts = [],
+  selectedIds,
+  onSelectionChange,
+}: TransactionTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortAsc, setSortAsc] = useState(false)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+
+  const selectable = !!onSelectionChange
+  const selected = selectedIds ?? new Set<string>()
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc)
@@ -37,6 +49,30 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
     else if (sortKey === 'value') cmp = a.value - b.value
     return sortAsc ? cmp : -cmp
   })
+
+  const allChecked = sorted.length > 0 && sorted.every(tx => selected.has(tx.id))
+  const someChecked = sorted.some(tx => selected.has(tx.id))
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return
+    if (allChecked) {
+      const next = new Set(selected)
+      sorted.forEach(tx => next.delete(tx.id))
+      onSelectionChange(next)
+    } else {
+      const next = new Set(selected)
+      sorted.forEach(tx => next.add(tx.id))
+      onSelectionChange(next)
+    }
+  }
+
+  const toggleOne = (id: string) => {
+    if (!onSelectionChange) return
+    const next = new Set(selected)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    onSelectionChange(next)
+  }
 
   const SortIcon = ({ col }: { col: SortKey }) => (
     <span className="ml-1 text-text-tertiary">
@@ -64,6 +100,17 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
       <table className="w-full min-w-[600px]">
         <thead>
           <tr className="border-b border-border bg-bg-page">
+            {selectable && (
+              <th className="pl-4 pr-2 py-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={el => { if (el) el.indeterminate = someChecked && !allChecked }}
+                  onChange={toggleAll}
+                  className="w-4 h-4 rounded border-border accent-accent cursor-pointer"
+                />
+              </th>
+            )}
             {[
               { key: 'date' as SortKey, label: 'Data' },
               { key: 'description' as SortKey, label: 'Descrição' },
@@ -95,13 +142,29 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
           {sorted.map(tx => {
             const account = tx.account_id ? accounts.find(a => a.id === tx.account_id) : undefined
             const isIncome = tx.value < 0
+            const isSelected = selected.has(tx.id)
             return (
               <tr
                 key={tx.id}
                 onMouseEnter={() => setHoveredId(tx.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                className="border-b border-border-light last:border-0 hover:bg-bg-page transition-colors"
+                onClick={selectable ? () => toggleOne(tx.id) : undefined}
+                className={`border-b border-border-light last:border-0 transition-colors ${
+                  isSelected
+                    ? 'bg-accent/5'
+                    : 'hover:bg-bg-page'
+                } ${selectable ? 'cursor-pointer' : ''}`}
               >
+                {selectable && (
+                  <td className="pl-4 pr-2 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOne(tx.id)}
+                      className="w-4 h-4 rounded border-border accent-accent cursor-pointer"
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">{formatDate(tx.date)}</td>
                 <td className="px-4 py-3 text-sm text-text-primary font-medium">
                   <div>{tx.description}</div>
@@ -118,7 +181,7 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
                 <td className="px-4 py-3 text-sm font-semibold tabular-nums" style={{ color: isIncome ? 'var(--positive)' : 'var(--negative)' }}>
                   {isIncome ? '+' : '-'}{formatCurrency(Math.abs(tx.value))}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <div className={`flex items-center gap-1 transition-opacity ${hoveredId === tx.id ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                       onClick={() => onEdit(tx)}

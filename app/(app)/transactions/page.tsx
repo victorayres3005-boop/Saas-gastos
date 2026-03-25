@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Download, FileText, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
+import { Plus, Download, FileText, ChevronLeft, ChevronRight, Upload, Trash2, X } from 'lucide-react'
 import { TransactionTable } from '@/components/transactions/TransactionTable'
 import { AddTransactionModal } from '@/components/transactions/AddTransactionModal'
 import { EditTransactionModal } from '@/components/transactions/EditTransactionModal'
@@ -27,7 +27,7 @@ function TransactionsContent() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth())
   const [year, setYear] = useState(now.getFullYear())
-  const { transactions, loading, addTransaction, deleteTransaction, importTransactions } = useTransactions(month, year)
+  const { transactions, loading, addTransaction, deleteTransaction, deleteTransactions, importTransactions } = useTransactions(month, year)
   const { accounts } = useAccounts()
   const { profile } = useProfile()
   const { showToast } = useToast()
@@ -39,6 +39,9 @@ function TransactionsContent() {
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
   const [activeAccount, setActiveAccount] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
 
   // Open modal from PWA shortcut (?new=1)
   useEffect(() => {
@@ -86,6 +89,20 @@ function TransactionsContent() {
         })
         showToast('Transação restaurada!')
       } : undefined)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds)
+    setBulkDeleting(true)
+    const { error } = await deleteTransactions(ids)
+    setBulkDeleting(false)
+    setBulkConfirmOpen(false)
+    if (error) {
+      showToast('Erro ao excluir transações', 'error')
+    } else {
+      setSelectedIds(new Set())
+      showToast(`${ids.length} transação${ids.length > 1 ? 'ões' : ''} excluída${ids.length > 1 ? 's' : ''}`, 'success')
     }
   }
 
@@ -260,7 +277,14 @@ function TransactionsContent() {
           ))}
         </div>
       ) : (
-        <TransactionTable transactions={filtered} onDelete={setDeletingId} onEdit={setEditingTx} accounts={accounts} />
+        <TransactionTable
+          transactions={filtered}
+          onDelete={setDeletingId}
+          onEdit={setEditingTx}
+          accounts={accounts}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+        />
       )}
 
       <Modal isOpen={csvOpen} onClose={() => setCsvOpen(false)} title="Importar CSV">
@@ -277,6 +301,39 @@ function TransactionsContent() {
         onCancel={() => setDeletingId(null)}
         loading={deleting}
       />
+      <ConfirmDialog
+        isOpen={bulkConfirmOpen}
+        title={`Excluir ${selectedIds.size} transação${selectedIds.size > 1 ? 'ões' : ''}`}
+        description={`Tem certeza que deseja excluir ${selectedIds.size} transação${selectedIds.size > 1 ? 'ões selecionadas' : ' selecionada'}? Esta ação não pode ser desfeita.`}
+        confirmLabel={`Excluir ${selectedIds.size} transação${selectedIds.size > 1 ? 'ões' : ''}`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkConfirmOpen(false)}
+        loading={bulkDeleting}
+      />
+
+      {/* Floating bulk-action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border border-border bg-bg-surface animate-in slide-in-from-bottom-4 duration-200">
+          <span className="text-sm font-medium text-text-primary tabular-nums">
+            {selectedIds.size} selecionada{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <div className="w-px h-5 bg-border" />
+          <button
+            onClick={() => setBulkConfirmOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-negative bg-negative-light hover:bg-negative/20 transition-colors"
+          >
+            <Trash2 size={14} />
+            Excluir
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:text-text-primary hover:bg-bg-page transition-colors"
+            title="Cancelar seleção"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </main>
   )
 }

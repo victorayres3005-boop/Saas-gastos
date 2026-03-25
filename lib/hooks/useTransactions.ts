@@ -57,6 +57,14 @@ export function useTransactions(month?: number, year?: number) {
     return { error: error?.message }
   }
 
+  const deleteTransactions = async (ids: string[]) => {
+    if (ids.length === 0) return { error: undefined }
+    const supabase = createClient()
+    const { error } = await supabase.from('transactions').delete().in('id', ids)
+    if (!error) setTransactions(prev => prev.filter(t => !ids.includes(t.id)))
+    return { error: error?.message }
+  }
+
   const importTransactions = async (txs: Omit<Transaction, 'id' | 'user_id' | 'created_at'>[]) => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -67,5 +75,5 @@ export function useTransactions(month?: number, year?: number) {
     return { error: error?.message }
   }
 
-  return { transactions, loading, error, addTransaction, deleteTransaction, importTransactions, refetch: fetchTransactions }
+  return { transactions, loading, error, addTransaction, deleteTransaction, deleteTransactions, importTransactions, refetch: fetchTransactions }
 }
