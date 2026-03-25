@@ -60,8 +60,8 @@ function LoginFormInner() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white border border-[#E5E5E5] rounded-xl p-10 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="min-h-screen bg-bg-page flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-bg-surface border border-border rounded-2xl p-10 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-8">
           <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
@@ -78,7 +78,7 @@ function LoginFormInner() {
           type="button"
           onClick={handleGoogle}
           disabled={googleLoading || loading}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-[#E5E5E5] rounded-lg text-sm font-medium text-text-primary bg-white hover:bg-[#F9F9F9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-border rounded-lg text-sm font-medium text-text-primary bg-bg-surface hover:bg-bg-page transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {googleLoading ? (
             <span className="w-4 h-4 border-2 border-[#E5E5E5] border-t-text-secondary rounded-full animate-spin" />

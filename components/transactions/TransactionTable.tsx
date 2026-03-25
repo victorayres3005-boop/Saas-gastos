@@ -47,17 +47,17 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
 
   if (transactions.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-border py-16 text-center">
+      <div className="bg-bg-surface rounded-xl border border-border py-16 text-center">
         <p className="text-sm text-text-tertiary">Nenhuma transação encontrada</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="bg-bg-surface rounded-xl border border-border overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-border">
+          <tr className="border-b border-border bg-bg-page">
             {[
               { key: 'date' as SortKey, label: 'Data' },
               { key: 'description' as SortKey, label: 'Descrição' },
@@ -66,19 +66,19 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
               <th
                 key={col.key}
                 onClick={() => handleSort(col.key)}
-                className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary cursor-pointer hover:text-text-primary select-none"
+                className="px-4 py-3 text-left text-xs font-semibold text-text-secondary cursor-pointer hover:text-text-primary select-none"
               >
                 <span className="flex items-center">{col.label}<SortIcon col={col.key} /></span>
               </th>
             ))}
             {showAccounts && (
-              <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary select-none">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary select-none">
                 Conta
               </th>
             )}
             <th
               onClick={() => handleSort('value')}
-              className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary cursor-pointer hover:text-text-primary select-none"
+              className="px-4 py-3 text-left text-xs font-semibold text-text-secondary cursor-pointer hover:text-text-primary select-none"
             >
               <span className="flex items-center">Valor<SortIcon col="value" /></span>
             </th>
@@ -88,12 +88,13 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
         <tbody>
           {sorted.map(tx => {
             const account = tx.account_id ? accounts.find(a => a.id === tx.account_id) : undefined
+            const isIncome = tx.value < 0
             return (
               <tr
                 key={tx.id}
                 onMouseEnter={() => setHoveredId(tx.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                className="border-b border-border-light last:border-0 hover:bg-[#FAFAFA] transition-colors"
+                className="border-b border-border-light last:border-0 hover:bg-bg-page transition-colors"
               >
                 <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">{formatDate(tx.date)}</td>
                 <td className="px-4 py-3 text-sm text-text-primary font-medium">
@@ -108,24 +109,24 @@ export function TransactionTable({ transactions, onDelete, onEdit, accounts = []
                     {account ? <AccountBadge account={account} size="sm" /> : <span className="text-xs text-text-tertiary">—</span>}
                   </td>
                 )}
-                <td className="px-4 py-3 text-sm font-semibold tabular-nums" style={{ color: tx.value < 0 ? '#16A34A' : '#DC2626' }}>
-                  {tx.value < 0 ? '+' : '-'}{formatCurrency(Math.abs(tx.value))}
+                <td className="px-4 py-3 text-sm font-semibold tabular-nums" style={{ color: isIncome ? 'var(--positive)' : 'var(--negative)' }}>
+                  {isIncome ? '+' : '-'}{formatCurrency(Math.abs(tx.value))}
                 </td>
                 <td className="px-4 py-3">
-                  <div className={`flex items-center gap-2 transition-opacity ${hoveredId === tx.id ? 'opacity-100' : 'opacity-0'}`}>
+                  <div className={`flex items-center gap-1 transition-opacity ${hoveredId === tx.id ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                       onClick={() => onEdit(tx)}
-                      className="text-text-tertiary hover:text-accent transition-colors p-1"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:text-accent hover:bg-accent-light transition-colors"
                       title="Editar"
                     >
-                      <Pencil size={14} />
+                      <Pencil size={13} />
                     </button>
                     <button
                       onClick={() => onDelete(tx.id)}
-                      className="text-text-tertiary hover:text-negative transition-colors p-1"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:text-negative hover:bg-negative-light transition-colors"
                       title="Excluir"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </td>

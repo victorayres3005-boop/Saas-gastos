@@ -80,13 +80,13 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* Toggle Despesa / Receita */}
-        <div className="flex rounded-lg border border-border overflow-hidden">
+        <div className="flex rounded-xl border border-border overflow-hidden bg-bg-page p-1 gap-1">
           <button type="button" onClick={() => { setIsIncome(false); setCategory(EXPENSE_CATEGORIES[0]) }}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${!isIncome ? 'bg-red-50 text-red-600 border-r border-border' : 'text-text-tertiary hover:bg-gray-50 border-r border-border'}`}>
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${!isIncome ? 'bg-negative-light text-negative shadow-sm' : 'text-text-tertiary hover:text-text-secondary'}`}>
             Despesa
           </button>
           <button type="button" onClick={() => { setIsIncome(true); setCategory(INCOME_CATEGORIES[0]) }}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${isIncome ? 'bg-green-50 text-green-600' : 'text-text-tertiary hover:bg-gray-50'}`}>
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${isIncome ? 'bg-positive-light text-positive shadow-sm' : 'text-text-tertiary hover:text-text-secondary'}`}>
             Receita
           </button>
         </div>
@@ -100,15 +100,16 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-text-primary">Categoria</label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {visibleCategories.map(key => {
               const cat = CATEGORIES[key]
+              const selected = category === key
               return (
                 <button key={key} type="button" onClick={() => setCategory(key)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                  style={category === key
-                    ? { backgroundColor: cat.bg, color: cat.text, borderColor: 'transparent' }
-                    : { borderColor: '#E5E5E5', backgroundColor: 'white', color: '#6B6B6B' }}>
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
+                  style={selected
+                    ? { backgroundColor: cat.bg, color: cat.text, borderColor: cat.color + '40' }
+                    : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
                   {cat.label}
                 </button>
               )
@@ -120,7 +121,7 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text-primary">Conta (opcional)</label>
             <select value={accountId} onChange={e => setAccountId(e.target.value)}
-              className="w-full h-9 px-3 border border-border rounded-lg text-sm text-text-primary bg-white outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] transition-all">
+              className="w-full h-9 px-3 border border-border rounded-lg text-sm text-text-primary bg-bg-surface outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] transition-all">
               <option value="">Sem conta específica</option>
               {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
             </select>
@@ -129,12 +130,12 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
 
         <Input label="Data" type="date" value={date} onChange={e => setDate(e.target.value)} required />
 
-        {/* Parcelado (só para despesas) */}
+        {/* Parcelado */}
         {!isIncome && (
           <>
             <div className="flex items-center gap-3 py-1">
               <button type="button" onClick={() => setIsInstallment(!isInstallment)}
-                className={`w-9 h-5 rounded-full transition-colors relative ${isInstallment ? 'bg-accent' : 'bg-border'}`}>
+                className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${isInstallment ? 'bg-accent' : 'bg-border'}`}>
                 <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isInstallment ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </button>
               <span className="text-sm text-text-secondary">Compra parcelada</span>
@@ -142,10 +143,10 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
             {isInstallment && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-text-primary">Número de parcelas</label>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap">
                   {[2,3,4,5,6,10,12,18,24].map(n => (
                     <button key={n} type="button" onClick={() => setInstallments(n)}
-                      className={`w-10 h-9 rounded-lg text-sm font-medium border transition-colors ${installments === n ? 'bg-accent text-white border-accent' : 'border-border text-text-secondary hover:border-accent'}`}>
+                      className={`w-10 h-9 rounded-lg text-sm font-medium border transition-colors ${installments === n ? 'bg-accent text-white border-accent' : 'border-border text-text-secondary hover:border-accent bg-bg-surface'}`}>
                       {n}x
                     </button>
                   ))}
@@ -158,7 +159,7 @@ export function AddTransactionModal({ isOpen, onClose, onAdd, accounts = [] }: A
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-text-primary">Observação (opcional)</label>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionais..."
-            className="w-full px-3 py-2 border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary bg-white outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] resize-none h-16 transition-all" />
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary bg-bg-surface outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,107,53,0.12)] resize-none h-16 transition-all" />
         </div>
 
         {error && <p className="text-xs text-negative">{error}</p>}
