@@ -5,6 +5,7 @@ import { useBudgets } from '@/lib/hooks/useBudgets'
 import { useTransactions } from '@/lib/hooks/useTransactions'
 import { useRecurring } from '@/lib/hooks/useRecurring'
 import { BudgetRow } from '@/components/budget/BudgetRow'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { CATEGORIES, EXPENSE_CATEGORIES, type CategoryKey } from '@/lib/utils/categories'
 import { useToast } from '@/components/ui/Toast'
@@ -114,7 +115,18 @@ export default function BudgetPage() {
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary w-36 text-right">Limite Mensal</span>
         </div>
         {budgetsLoading || txLoading ? (
-          <div className="py-8 text-center text-sm text-text-tertiary">Carregando...</div>
+          <div className="flex flex-col">
+            {Array(EXPENSE_CATEGORIES.length).fill(0).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3 border-b border-border-light last:border-0">
+                <Skeleton className="h-5 w-24 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-2 w-full rounded-full" />
+                  <Skeleton className="h-1.5 w-full rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-20 flex-shrink-0" />
+              </div>
+            ))}
+          </div>
         ) : (
           EXPENSE_CATEGORIES.map(cat => {
             const budget = budgets.find(b => b.category === cat)

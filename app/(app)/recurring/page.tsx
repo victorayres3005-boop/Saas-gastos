@@ -133,16 +133,15 @@ export default function RecurringPage() {
       <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-xs text-text-tertiary mb-1">Despesas/mês</p>
-          <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(totalExpense)}</p>
+          <p className="text-lg font-bold text-negative tabular-nums">{formatCurrency(totalExpense)}</p>
         </div>
         <div className="bg-bg-surface rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <p className="text-xs text-text-tertiary mb-1">Receitas/mês</p>
-          <p className="text-lg font-bold text-green-600 tabular-nums">{formatCurrency(totalIncome)}</p>
+          <p className="text-lg font-bold text-positive tabular-nums">{formatCurrency(totalIncome)}</p>
         </div>
-        <div className="rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]"
-          style={{ backgroundColor: totalMonthly >= 0 ? '#F0FDF4' : '#FEF2F2' }}>
+        <div className={`rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)] ${totalMonthly >= 0 ? 'bg-positive-light' : 'bg-negative-light'}`}>
           <p className="text-xs text-text-tertiary mb-1">Saldo mensal</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: totalMonthly >= 0 ? '#16A34A' : '#DC2626' }}>
+          <p className={`text-lg font-bold tabular-nums ${totalMonthly >= 0 ? 'text-positive' : 'text-negative'}`}>
             {formatCurrency(Math.abs(totalMonthly))}
           </p>
         </div>
@@ -183,7 +182,7 @@ export default function RecurringPage() {
                   <tr key={item.id} className={`border-b border-border-light last:border-0 transition-colors hover:bg-bg-page ${!item.active ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="text-sm font-medium text-text-primary">{item.description}</div>
-                      <div className={`text-xs mt-0.5 font-medium ${item.active ? 'text-green-600' : 'text-text-tertiary'}`}>
+                      <div className={`text-xs mt-0.5 font-medium ${item.active ? 'text-positive' : 'text-text-tertiary'}`}>
                         {item.active ? 'Ativa' : 'Pausada'}
                       </div>
                     </td>
@@ -196,7 +195,7 @@ export default function RecurringPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-text-secondary">{FREQ_LABELS[item.frequency]}</td>
                     <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(item.next_date)}</td>
-                    <td className="px-4 py-3 text-sm font-semibold tabular-nums" style={{ color: item.value < 0 ? '#16A34A' : '#DC2626' }}>
+                    <td className={`px-4 py-3 text-sm font-semibold tabular-nums ${item.value < 0 ? 'text-positive' : 'text-negative'}`}>
                       {item.value < 0 ? '+' : '-'}{formatCurrency(Math.abs(item.value))}
                     </td>
                     <td className="px-4 py-3">
@@ -228,11 +227,11 @@ export default function RecurringPage() {
           {/* Toggle Despesa / Receita */}
           <div className="flex rounded-lg border border-accent/30 overflow-hidden">
             <button type="button" onClick={() => setForm(f => ({ ...f, isIncome: false, category: EXPENSE_CATEGORIES[0] }))}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${!form.isIncome ? 'bg-red-50 text-red-600 border-r border-border' : 'text-text-tertiary hover:bg-gray-50 border-r border-border'}`}>
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${!form.isIncome ? 'bg-negative-light text-negative border-r border-border' : 'text-text-tertiary hover:bg-bg-page border-r border-border'}`}>
               Despesa
             </button>
             <button type="button" onClick={() => setForm(f => ({ ...f, isIncome: true, category: INCOME_CATEGORIES[0] }))}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${form.isIncome ? 'bg-green-50 text-green-600' : 'text-text-tertiary hover:bg-gray-50'}`}>
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${form.isIncome ? 'bg-positive-light text-positive' : 'text-text-tertiary hover:bg-bg-page'}`}>
               Receita
             </button>
           </div>

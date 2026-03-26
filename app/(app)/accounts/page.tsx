@@ -68,7 +68,7 @@ function getAutoName(bankId: string, type: Account['type']): string {
 
 function SectionLabel({ text }: { text: string }) {
   return (
-    <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9CA3AF', margin: '0 0 8px 0' }}>
+    <p className="text-[11px] font-medium tracking-[0.06em] uppercase text-text-tertiary mb-2">
       {text}
     </p>
   )
@@ -100,65 +100,55 @@ function AccountForm({
   const previewName = form.name || 'Nome da conta'
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{
-        background: '#F7F7F8', borderRadius: 14, padding: '14px 16px',
-        display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #EBEBEB',
-      }}>
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      {/* Preview */}
+      <div className="bg-bg-page rounded-xl p-4 flex items-center gap-3.5 border border-border">
         {form.bank ? (
           <BankLogo bankId={form.bank} size={44} />
         ) : (
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: form.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Wallet size={20} color={form.color} />
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: form.color + '25' }}>
+            <Wallet size={20} style={{ color: form.color }} />
           </div>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: form.name ? '#0A0A0A' : '#B0B0B0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-semibold truncate ${form.name ? 'text-text-primary' : 'text-text-tertiary'}`}>
             {previewName}
           </p>
-          <p style={{ fontSize: 12, color: '#9CA3AF', margin: '2px 0 0' }}>
-            {TYPE_LABELS[form.type]}
-          </p>
+          <p className="text-xs text-text-tertiary mt-0.5">{TYPE_LABELS[form.type]}</p>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ fontSize: 10, color: '#B0B0B0', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 2px' }}>Saldo inicial</p>
-          <p style={{ fontSize: 15, fontWeight: 700, color: previewBalance >= 0 ? '#16A34A' : '#DC2626', margin: 0 }}>
+        <div className="text-right flex-shrink-0">
+          <p className="text-[10px] text-text-tertiary uppercase tracking-[0.06em] mb-0.5">Saldo inicial</p>
+          <p className={`text-[15px] font-bold ${previewBalance >= 0 ? 'text-positive' : 'text-negative'}`}>
             {formatCurrency(previewBalance)}
           </p>
         </div>
       </div>
 
+      {/* Banco */}
       <div>
         <SectionLabel text="Banco / Instituição" />
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 10 } as React.CSSProperties}>
+        <div className="flex gap-1.5 overflow-x-auto pb-2.5 [scrollbar-width:none]">
           {([['all', 'Todos'], ...Object.entries(BANK_CATEGORIES)] as [string, string][]).map(([key, label]) => {
             const active = bankCategory === key
             return (
               <button key={key} type="button" onClick={() => setBankCategory(key as BankCategory | 'all')}
-                style={{
-                  flexShrink: 0, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap', cursor: 'pointer',
-                  border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  background: active ? '#FFF0EB' : 'transparent',
-                  color: active ? '#C94A1A' : '#6B6B6B',
-                  fontSize: 12, fontWeight: active ? 600 : 400,
-                }}>
+                className={`flex-shrink-0 px-3 py-1 rounded-full whitespace-nowrap text-xs transition-colors ${
+                  active ? 'border-2 border-accent bg-accent-light text-accent-text font-semibold' : 'border border-border text-text-secondary'
+                }`}>
                 {label}
               </button>
             )
           })}
         </div>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' } as React.CSSProperties}>
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
           <button type="button" onClick={() => setForm(f => ({ ...f, bank: '', name: '' }))}
-            style={{
-              flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 6, padding: '10px 14px', borderRadius: 8, minWidth: 64, cursor: 'pointer',
-              border: !form.bank ? '2px solid var(--accent)' : '1px solid var(--border)',
-              background: !form.bank ? '#FFF0EB' : 'transparent',
-            }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Wallet size={15} color="#9CA3AF" />
+            className={`flex-shrink-0 flex flex-col items-center gap-1.5 px-3.5 py-2.5 rounded-lg min-w-[64px] transition-colors ${
+              !form.bank ? 'border-2 border-accent bg-accent-light' : 'border border-border'
+            }`}>
+            <div className="w-8 h-8 rounded-lg bg-bg-page flex items-center justify-center">
+              <Wallet size={15} className="text-text-tertiary" />
             </div>
-            <span style={{ fontSize: 11, color: !form.bank ? '#C94A1A' : '#6B6B6B', whiteSpace: 'nowrap', fontWeight: !form.bank ? 500 : 400 }}>
+            <span className={`text-[11px] whitespace-nowrap ${!form.bank ? 'text-accent-text font-medium' : 'text-text-secondary'}`}>
               Outro
             </span>
           </button>
@@ -166,14 +156,11 @@ function AccountForm({
             const selected = form.bank === bank.id
             return (
               <button key={bank.id} type="button" onClick={() => onBankSelect(bank.id)}
-                style={{
-                  flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: 6, padding: '10px 14px', borderRadius: 8, minWidth: 64, cursor: 'pointer',
-                  border: selected ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  background: selected ? '#FFF0EB' : 'transparent',
-                }}>
+                className={`flex-shrink-0 flex flex-col items-center gap-1.5 px-3.5 py-2.5 rounded-lg min-w-[64px] transition-colors ${
+                  selected ? 'border-2 border-accent bg-accent-light' : 'border border-border'
+                }`}>
                 <BankLogo bankId={bank.id} size={32} />
-                <span style={{ fontSize: 11, color: selected ? '#C94A1A' : '#6B6B6B', whiteSpace: 'nowrap', fontWeight: selected ? 500 : 400 }}>
+                <span className={`text-[11px] whitespace-nowrap ${selected ? 'text-accent-text font-medium' : 'text-text-secondary'}`}>
                   {bank.name}
                 </span>
               </button>
@@ -182,7 +169,8 @@ function AccountForm({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      {/* Nome + Saldo */}
+      <div className="grid grid-cols-2 gap-3.5">
         <div>
           <SectionLabel text="Nome da conta" />
           <input
@@ -190,11 +178,7 @@ function AccountForm({
             placeholder="Ex: Nubank Crédito..."
             value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            style={{
-              width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
-              border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-primary)',
-              outline: 'none', boxSizing: 'border-box', background: '#fff',
-            }}
+            className="w-full h-9 px-3 border border-border rounded-lg text-[13px] text-text-primary bg-bg-surface outline-none focus:border-accent transition-all"
           />
         </div>
         <div>
@@ -203,29 +187,22 @@ function AccountForm({
             type="number" step="0.01" placeholder="0,00"
             value={form.balance}
             onChange={e => setForm(f => ({ ...f, balance: e.target.value }))}
-            style={{
-              width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
-              border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-primary)',
-              outline: 'none', boxSizing: 'border-box', background: '#fff',
-            }}
+            className="w-full h-9 px-3 border border-border rounded-lg text-[13px] text-text-primary bg-bg-surface outline-none focus:border-accent transition-all"
           />
         </div>
       </div>
 
+      {/* Tipo */}
       <div>
         <SectionLabel text="Tipo" />
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="flex gap-1.5 flex-wrap">
           {ACCOUNT_TYPES.map(({ value, label }) => {
             const selected = form.type === value
             return (
               <button key={value} type="button" onClick={() => onTypeChange(value as Account['type'])}
-                style={{
-                  padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
-                  border: selected ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  background: selected ? '#FFF0EB' : 'transparent',
-                  color: selected ? '#C94A1A' : '#6B6B6B',
-                  fontWeight: selected ? 500 : 400,
-                }}>
+                className={`px-3.5 py-[7px] text-[13px] rounded-lg transition-colors ${
+                  selected ? 'border-2 border-accent bg-accent-light text-accent-text font-medium' : 'border border-border text-text-secondary'
+                }`}>
                 {label}
               </button>
             )
@@ -233,7 +210,7 @@ function AccountForm({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, paddingTop: 4 }}>
+      <div className="flex gap-3 pt-1">
         <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">Cancelar</Button>
         <Button type="submit" loading={saving} loadingText="Salvando..." className="flex-1">{submitLabel}</Button>
       </div>
@@ -438,10 +415,9 @@ export default function AccountsPage() {
             <p className="text-xs text-text-tertiary mb-1">Saldo inicial total</p>
             <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(totalInitial)}</p>
           </div>
-          <div className="rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)]"
-            style={{ backgroundColor: totalEffective >= 0 ? '#F0FDF4' : '#FEF2F2' }}>
+          <div className={`rounded-xl border border-accent/30 p-4 shadow-[0_1px_3px_rgba(255,107,53,0.08)] ${totalEffective >= 0 ? 'bg-positive-light' : 'bg-negative-light'}`}>
             <p className="text-xs text-text-tertiary mb-1">Saldo projetado total</p>
-            <p className="text-lg font-bold tabular-nums" style={{ color: totalEffective >= 0 ? '#16A34A' : '#DC2626' }}>
+            <p className={`text-lg font-bold tabular-nums ${totalEffective >= 0 ? 'text-positive' : 'text-negative'}`}>
               {formatCurrency(totalEffective)}
             </p>
           </div>
@@ -504,7 +480,7 @@ export default function AccountsPage() {
                   {/* Saldo atual */}
                   <div className="text-right mr-2">
                     <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Saldo projetado</p>
-                    <p className="text-base font-bold tabular-nums" style={{ color: effectiveBalance >= 0 ? '#16A34A' : '#DC2626' }}>
+                    <p className={`text-base font-bold tabular-nums ${effectiveBalance >= 0 ? 'text-positive' : 'text-negative'}`}>
                       {formatCurrency(effectiveBalance)}
                     </p>
                     <p className="text-[10px] text-text-tertiary">
@@ -534,11 +510,11 @@ export default function AccountsPage() {
                     <div className="grid grid-cols-3 gap-0 border-b border-border">
                       <div className="px-4 py-3 border-r border-border">
                         <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Receitas</p>
-                        <p className="text-sm font-semibold text-green-600 tabular-nums">+{formatCurrency(totalIncome)}</p>
+                        <p className="text-sm font-semibold text-positive tabular-nums">+{formatCurrency(totalIncome)}</p>
                       </div>
                       <div className="px-4 py-3 border-r border-border">
                         <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Despesas</p>
-                        <p className="text-sm font-semibold text-red-600 tabular-nums">-{formatCurrency(totalExpense)}</p>
+                        <p className="text-sm font-semibold text-negative tabular-nums">-{formatCurrency(totalExpense)}</p>
                       </div>
                       <div className="px-4 py-3">
                         <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-0.5">Transações</p>
@@ -555,9 +531,9 @@ export default function AccountsPage() {
                             Recorrentes vinculadas
                           </p>
                           <span className="ml-auto text-[10px] text-text-tertiary">
-                            {recIncome > 0 && <span className="text-green-600">+{formatCurrency(recIncome)}/mês</span>}
+                            {recIncome > 0 && <span className="text-positive">+{formatCurrency(recIncome)}/mês</span>}
                             {recIncome > 0 && recExpense > 0 && ' · '}
-                            {recExpense > 0 && <span className="text-red-600">-{formatCurrency(recExpense)}/mês</span>}
+                            {recExpense > 0 && <span className="text-negative">-{formatCurrency(recExpense)}/mês</span>}
                           </span>
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -567,7 +543,7 @@ export default function AccountsPage() {
                               <span className="text-xs text-text-tertiary capitalize">
                                 {r.frequency === 'monthly' ? 'Mensal' : r.frequency === 'weekly' ? 'Semanal' : 'Anual'}
                               </span>
-                              <span className="text-xs font-semibold tabular-nums" style={{ color: r.value < 0 ? '#16A34A' : '#DC2626' }}>
+                              <span className={`text-xs font-semibold tabular-nums ${r.value < 0 ? 'text-positive' : 'text-negative'}`}>
                                 {r.value < 0 ? '+' : '-'}{formatCurrency(Math.abs(r.value))}
                               </span>
                             </div>
@@ -594,7 +570,7 @@ export default function AccountsPage() {
                                 <p className="text-[10px] text-text-tertiary mt-0.5">{formatDate(tx.date)}</p>
                               </div>
                               <CategoryBadge category={tx.category as CategoryKey} />
-                              <span className="text-xs font-semibold tabular-nums ml-1" style={{ color: tx.value < 0 ? '#16A34A' : '#DC2626' }}>
+                              <span className={`text-xs font-semibold tabular-nums ml-1 ${tx.value < 0 ? 'text-positive' : 'text-negative'}`}>
                                 {tx.value < 0 ? '+' : '-'}{formatCurrency(Math.abs(tx.value))}
                               </span>
                             </div>

@@ -167,7 +167,7 @@ export default function GoalsPage() {
             <RefreshCw size={11} className="animate-spin" /> Buscando taxas do Banco Central...
           </div>
         ) : rates.error ? (
-          <p className="text-xs text-red-500">
+          <p className="text-xs text-negative">
             Não foi possível obter as taxas. Verifique sua conexão e tente novamente.
           </p>
         ) : (
@@ -372,16 +372,13 @@ export default function GoalsPage() {
                 return (
                   <button key={value} type="button"
                     onClick={() => setForm(f => ({ ...f, investment_type: value }))}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors text-left"
-                    style={selected
-                      ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#166534' }
-                      : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors text-left ${selected ? 'border-positive bg-positive-light text-positive' : 'border-border bg-bg-surface text-text-secondary'}`}>
                     <div>
                       <span className="font-medium">{label}</span>
                       {desc && <span className="text-xs ml-1.5 opacity-60">{desc}</span>}
                     </div>
                     {yieldPreview && (
-                      <span className="text-xs font-semibold text-green-600">{yieldPreview}</span>
+                      <span className="text-xs font-semibold text-positive">{yieldPreview}</span>
                     )}
                   </button>
                 )

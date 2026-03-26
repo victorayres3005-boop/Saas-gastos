@@ -202,7 +202,10 @@ export default function AnalysisPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-2 bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Receitas vs Despesas</p>
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-3.5 rounded-full bg-accent" />
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Receitas vs Despesas</p>
+            </div>
             {monthOverMonth && (
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${monthOverMonth.diff > 0 ? 'bg-negative-light text-negative' : 'bg-positive-light text-positive'}`}>
                 {monthOverMonth.diff > 0 ? '+' : ''}{monthOverMonth.pct.toFixed(1)}% vs mês anterior
@@ -235,7 +238,10 @@ export default function AnalysisPage() {
 
           {/* Mês a mês */}
           <div className="bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-3">Resumo Mensal</p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1 h-3.5 rounded-full bg-accent" />
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Resumo Mensal</p>
+            </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {[...monthlyData].reverse().map(m => (
                 <div key={m.key} className="flex items-center justify-between py-1 border-b border-border-light last:border-0">
@@ -254,11 +260,17 @@ export default function AnalysisPage() {
       {/* Top categorias + donut */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-2 bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Distribuição por Categoria</p>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-1 h-3.5 rounded-full bg-accent" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Distribuição por Categoria</p>
+          </div>
           <DonutChart data={topCategories} />
         </div>
         <div className="lg:col-span-3 bg-bg-surface border border-accent/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(255,107,53,0.08)]">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary mb-4">Top Categorias — Últimos {period} meses</p>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-1 h-3.5 rounded-full bg-accent" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">Top Categorias — Últimos {period} meses</p>
+          </div>
           {topCategories.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-sm text-text-tertiary">Sem dados para exibir</div>
           ) : (
