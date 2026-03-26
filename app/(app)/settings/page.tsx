@@ -1,9 +1,10 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Camera, Download, Trash2, Mail,
   FileText, Loader2, CheckCircle2, Eye, EyeOff,
   AlertTriangle, Sun, Moon, Monitor,
+  BarChart2, Landmark, Target, CalendarDays,
 } from 'lucide-react'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { useToast } from '@/components/ui/Toast'
@@ -26,10 +27,13 @@ function SectionCard({ title, description, children, danger }: {
   danger?: boolean
 }) {
   return (
-    <section className={`rounded-xl border p-6 ${danger ? 'border-negative/20 bg-negative-light' : 'bg-bg-surface border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
+    <section className={`rounded-xl border p-5 ${danger ? 'border-negative/20 bg-negative-light' : 'bg-bg-surface border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)]'}`}>
       <div className="mb-5">
-        <h2 className={`text-sm font-semibold ${danger ? 'text-negative' : 'text-text-primary'}`}>{title}</h2>
-        {description && <p className="text-xs text-text-tertiary mt-0.5">{description}</p>}
+        <div className="flex items-center gap-2">
+          {!danger && <span className="w-1 h-4 rounded-full bg-accent flex-shrink-0" />}
+          <h2 className={`text-sm font-semibold ${danger ? 'text-negative' : 'text-text-primary'}`}>{title}</h2>
+        </div>
+        {description && <p className={`text-xs mt-0.5 ${danger ? 'text-negative/70' : 'text-text-tertiary'} ${!danger ? 'ml-3' : ''}`}>{description}</p>}
       </div>
       {children}
     </section>
@@ -69,11 +73,19 @@ const strengthRules = [
   { test: (p: string) => /[^A-Za-z0-9]/.test(p), label: 'Símbolo' },
 ]
 
+function formatMemberSince(dateStr?: string | null) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+}
+
 export default function SettingsPage() {
   const { profile, loading, refetch } = useProfile()
   const { showToast } = useToast()
   const { theme, setTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [stats, setStats] = useState({ transactions: 0, accounts: 0, goals: 0 })
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [name, setName] = useState('')
@@ -94,6 +106,21 @@ export default function SettingsPage() {
   const [clearingTx, setClearingTx] = useState(false)
   const [fixSignsModal, setFixSignsModal] = useState(false)
   const [fixingSigns, setFixingSigns] = useState(false)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const [{ count: txCount }, { count: accCount }, { count: goalCount }] = await Promise.all([
+        supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('accounts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('goals').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      ])
+      setStats({ transactions: txCount ?? 0, accounts: accCount ?? 0, goals: goalCount ?? 0 })
+    }
+    fetchStats()
+  }, [])
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -222,51 +249,74 @@ export default function SettingsPage() {
   const passedRules = strengthRules.filter(r => r.test(newPassword)).length
 
   if (loading) return (
-    <main className="p-8 min-h-screen">
+    <main className="p-4 md:p-8 min-h-screen">
       <div className="max-w-2xl space-y-4">
+        <div className="h-40 rounded-xl bg-border animate-pulse" />
         {Array(4).fill(0).map((_, i) => <div key={i} className="h-32 rounded-xl bg-border animate-pulse" />)}
       </div>
     </main>
   )
 
   return (
-    <main className="p-6 lg:p-8 min-h-screen">
+    <main className="p-4 md:p-8 min-h-screen">
       <div className="max-w-2xl">
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">Configurações</h1>
-          <p className="text-sm text-text-secondary mt-1">Gerencie sua conta e preferências</p>
+        {/* ── Perfil Hero ───────────────────────────────────────────── */}
+        <div className="bg-bg-surface border border-accent/30 shadow-[0_1px_3px_rgba(255,107,53,0.08)] rounded-xl p-5 mb-4">
+          <div className="flex items-center gap-4 mb-4">
+            {/* Avatar with upload button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="group relative flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+            >
+              <Avatar name={profile?.full_name || '?'} imageUrl={profile?.avatar_url} size="lg" />
+              <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                {uploadingAvatar
+                  ? <Loader2 size={16} className="text-white animate-spin" />
+                  : <><Camera size={13} className="text-white" /><span className="text-[9px] text-white font-medium">Alterar</span></>
+                }
+              </div>
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleAvatarChange} />
+
+            {/* Name + email + member since */}
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-text-primary truncate">{profile?.full_name || '—'}</p>
+              <p className="text-xs text-text-tertiary mt-0.5 truncate">{profile?.email}</p>
+              {profile?.created_at && (
+                <div className="flex items-center gap-1 mt-1.5">
+                  <CalendarDays size={11} className="text-text-tertiary flex-shrink-0" />
+                  <span className="text-[11px] text-text-tertiary">Membro desde {formatMemberSince(profile.created_at)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-3 gap-2 pt-4 border-t border-accent/20">
+            <div className="flex flex-col items-center gap-1 py-2 rounded-lg bg-bg-page">
+              <BarChart2 size={14} className="text-accent" />
+              <span className="text-sm font-semibold text-text-primary">{stats.transactions}</span>
+              <span className="text-[10px] text-text-tertiary leading-none">Transações</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 py-2 rounded-lg bg-bg-page">
+              <Landmark size={14} className="text-accent" />
+              <span className="text-sm font-semibold text-text-primary">{stats.accounts}</span>
+              <span className="text-[10px] text-text-tertiary leading-none">Contas</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 py-2 rounded-lg bg-bg-page">
+              <Target size={14} className="text-accent" />
+              <span className="text-sm font-semibold text-text-primary">{stats.goals}</span>
+              <span className="text-[10px] text-text-tertiary leading-none">Metas</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4">
 
           {/* ── Perfil ──────────────────────────────────────────────── */}
-          <SectionCard title="Perfil" description="Foto e nome de exibição">
-            <div className="flex items-center gap-5 mb-5 pb-5 border-b border-border">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingAvatar}
-                className="group relative flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-              >
-                <Avatar name={profile?.full_name || '?'} imageUrl={profile?.avatar_url} size="lg" />
-                <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                  {uploadingAvatar
-                    ? <Loader2 size={16} className="text-white animate-spin" />
-                    : <><Camera size={14} className="text-white" /><span className="text-[9px] text-white font-medium">Alterar</span></>
-                  }
-                </div>
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleAvatarChange} />
-              <div>
-                <p className="text-sm font-semibold text-text-primary">{profile?.full_name}</p>
-                <p className="text-xs text-text-tertiary mt-0.5 mb-3">{profile?.email}</p>
-                <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={uploadingAvatar}>
-                  <Camera size={12} />
-                  {uploadingAvatar ? 'Enviando...' : 'Trocar foto'}
-                </Button>
-              </div>
-            </div>
+          <SectionCard title="Perfil" description="Nome de exibição">
             <form onSubmit={handleUpdateName} className="flex gap-3">
               <div className="flex-1">
                 <Input placeholder={profile?.full_name || 'Novo nome'} value={name} onChange={e => setName(e.target.value)} />

@@ -19,16 +19,14 @@ export function useBudgets() {
 
   useEffect(() => { fetchBudgets() }, [fetchBudgets])
 
-  const upsertBudget = async (category: string, limit_value: number) => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('budgets').upsert(
-      { user_id: user.id, category, limit_value } as Budget,
-      { onConflict: 'user_id,category' }
-    )
-    fetchBudgets()
+  // Atualiza apenas o estado local (sem gravar no banco)
+  const setLocalBudget = (category: string, limit_value: number) => {
+    setBudgets(prev => {
+      const exists = prev.find(b => b.category === category)
+      if (exists) return prev.map(b => b.category === category ? { ...b, limit_value } : b)
+      return [...prev, { id: '', user_id: '', category, limit_value } as Budget]
+    })
   }
 
-  return { budgets, loading, upsertBudget }
+  return { budgets, loading, setLocalBudget }
 }

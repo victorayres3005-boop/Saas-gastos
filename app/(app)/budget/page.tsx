@@ -13,7 +13,7 @@ import { upsertBudget } from '@/app/actions/budgets'
 
 export default function BudgetPage() {
   const now = new Date()
-  const { budgets, loading: budgetsLoading, upsertBudget: upsertLocal } = useBudgets()
+  const { budgets, loading: budgetsLoading, setLocalBudget } = useBudgets()
   const { transactions, loading: txLoading } = useTransactions(now.getMonth(), now.getFullYear())
   const { items: recurring } = useRecurring()
   const { showToast } = useToast()
@@ -54,8 +54,8 @@ export default function BudgetPage() {
   }, [budgets, spentByCategory])
 
   const handleUpdate = async (category: CategoryKey, limit: number) => {
-    upsertLocal(category, limit)
-    const result = await upsertBudget(category, limit)
+    setLocalBudget(category, limit) // atualização otimista no estado
+    const result = await upsertBudget(category, limit) // só o server action grava no banco
     if (result.error) showToast('Erro ao salvar', 'error')
     else showToast('Orçamento atualizado!')
   }

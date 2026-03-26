@@ -19,14 +19,27 @@ export default function AnalysisPage() {
   const [period, setPeriod] = useState<3 | 6 | 12>(6)
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true)
       const supabase = createClient()
       const { data } = await supabase.from('transactions').select('*').order('date')
       setTransactions((data as Transaction[]) || [])
       setLoading(false)
     }
-    fetch()
+    fetchData()
+
+    const refresh = async () => {
+      const supabase = createClient()
+      const { data } = await supabase.from('transactions').select('*').order('date')
+      setTransactions((data as Transaction[]) || [])
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('fintrack:transactions-updated', refresh)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('fintrack:transactions-updated', refresh)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   // ── Dados mensais ────────────────────────────────────────────────────────────
