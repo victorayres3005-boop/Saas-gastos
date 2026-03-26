@@ -49,6 +49,15 @@ function TransactionsContent() {
     if (searchParams.get('new') === '1') setModalOpen(true)
   }, [searchParams])
 
+  // Reseta filtros ao trocar de mês para evitar estado fantasma
+  useEffect(() => {
+    setActiveCategory(null)
+    setActiveAccount(null)
+    setSearch('')
+    setTypeFilter('all')
+    setSelectedIds(new Set())
+  }, [month, year])
+
   // Keyboard shortcut N to open modal
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

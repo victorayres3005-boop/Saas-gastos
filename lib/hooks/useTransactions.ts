@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '../supabase/client'
 import type { Database } from '../supabase/types'
 
@@ -10,9 +10,11 @@ export function useTransactions(month?: number, year?: number) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const fetchIdRef = useRef(0)
 
-  const fetchTransactions = useCallback(async () => {
-    setLoading(true)
+  const fetchTransactions = useCallback(async (silent = false) => {
+    const fetchId = ++fetchIdRef.current
+    if (!silent) setLoading(true)
     const supabase = createClient()
     let query = supabase
       .from('transactions')
@@ -26,6 +28,7 @@ export function useTransactions(month?: number, year?: number) {
     }
 
     const { data, error } = await query
+    if (fetchId !== fetchIdRef.current) return // resposta obsoleta, descarta
     if (error) setError(error.message)
     else setTransactions((data as Transaction[]) || [])
     setLoading(false)
@@ -35,8 +38,8 @@ export function useTransactions(month?: number, year?: number) {
 
   // Refaz fetch quando transações forem criadas/editadas/removidas
   useEffect(() => {
-    const handler = () => fetchTransactions()
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchTransactions() }
+    const handler = () => fetchTransactions(true)
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchTransactions(true) }
     window.addEventListener('fintrack:transactions-updated', handler)
     document.addEventListener('visibilitychange', onVisible)
     return () => {

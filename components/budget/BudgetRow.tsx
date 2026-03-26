@@ -19,8 +19,9 @@ export function BudgetRow({ category, spent, limit, recurringAmount = 0, onUpdat
   const [inputValue, setInputValue] = useState(limit.toString())
 
   const handleSave = () => {
-    const val = parseFloat(inputValue)
-    if (val > 0) { onUpdate(val); setEditing(false) }
+    const raw = inputValue.trim()
+    const val = raw === '' ? 0 : parseFloat(raw)
+    if (!isNaN(val) && val >= 0) { onUpdate(val); setEditing(false) }
   }
 
   const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0

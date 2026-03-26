@@ -118,7 +118,9 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
     return Math.abs(parseFloat(clean))
   }
 
-  function addTx(year: string, mm: string, dd: string, rawDesc: string, rawVal: string, isIncomeOverride?: boolean) {
+  const SKIP_DESC = /^(saldo\s+(?:anterior|final|do\s+dia|em\s+\d|devedor|credor|dispon[ií]vel|atual)|saldo\s*:)/i
+
+  function addTx(year: string, mm: string, dd: string, rawDesc: string, rawVal: string, isIncomeOverride?: boolean, allowDuplicate?: boolean) {
     const date = `${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
 
     const isNeg = rawVal.trim().startsWith('-')
@@ -136,8 +138,11 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
       .trim()
     if (description.length < 2) return
 
+    // Skip balance/summary lines that slipped past SKIP_LINE
+    if (SKIP_DESC.test(description)) return
+
     const key = `${date}|${absVal.toFixed(2)}|${description.slice(0, 15)}`
-    if (seen.has(key)) return
+    if (!allowDuplicate && seen.has(key)) return
     seen.add(key)
     // positive = credit (income), negative = debit (expense) — Brazilian bank convention
     const isIncome = isIncomeOverride !== undefined ? isIncomeOverride : !isNeg
@@ -146,12 +151,18 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
 
   // Pick the transaction value from a pair [v0, v1] where one is likely the saldo
   function pickTxFromPair(v0str: string, v1str: string): string | null {
+    // Signed value is almost certainly the transaction, not the balance
+    const v0signed = /^[-+]/.test(v0str.trim())
+    const v1signed = /^[-+]/.test(v1str.trim())
+    if (v0signed && !v1signed) return v0str
+    if (v1signed && !v0signed) return v1str
+
     const v0 = parseVal(v0str)
     const v1 = parseVal(v1str)
     if (isNaN(v0) || isNaN(v1)) return v0str
     const ratio = Math.max(v0, v1) / (Math.min(v0, v1) || 0.01)
-    // Both values similar magnitude → likely two consecutive balances, skip
-    if (ratio < 1.8 && v0 > 300 && v1 > 300) return null
+    // Both values similar magnitude — could be balance columns; treat first as transaction
+    if (ratio < 1.8 && v0 > 300 && v1 > 300) return v0str
     // First is much larger than second → first is the balance, second is transaction
     if (v0 > v1 * 3) return v1str
     // Otherwise first is the transaction (most common: [tx, saldo])
@@ -185,14 +196,14 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
     if (vals.length === 1) {
       // Only one value — that IS the transaction value
       const desc = rest.replace(vals[0], '').trim()
-      addTx(year, mm, dd, desc || 'Transação', vals[0])
+      addTx(year, mm, dd, desc || 'Transação', vals[0], undefined, true)
 
     } else if (vals.length === 2) {
       // Two values: usually [transaction, saldo] but sometimes [saldo_before, saldo_after]
       const txVal = pickTxFromPair(vals[0], vals[1])
       if (!txVal) continue  // both values are likely balances — skip line
       const desc = rest.replace(vals[0], '').replace(vals[1], '').trim()
-      addTx(year, mm, dd, desc || 'Transação', txVal)
+      addTx(year, mm, dd, desc || 'Transação', txVal, undefined, true)
 
     } else if (vals.length === 3) {
       // Three values: possibly [debit, credit, saldo]
@@ -201,13 +212,13 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
       const desc = rest
         .replace(vals[0], '').replace(vals[1], '').replace(vals[2], '').trim()
       if (debit > 0 && credit === 0) {
-        addTx(year, mm, dd, desc || 'Transação', vals[0], false)   // expense
+        addTx(year, mm, dd, desc || 'Transação', vals[0], false, true)   // expense
       } else if (credit > 0 && debit === 0) {
-        addTx(year, mm, dd, desc || 'Transação', vals[1], true)    // income
+        addTx(year, mm, dd, desc || 'Transação', vals[1], true, true)    // income
       } else {
         // Both columns populated → use pickTxFromPair on first two
         const txVal = pickTxFromPair(vals[0], vals[1]) ?? vals[0]
-        addTx(year, mm, dd, desc || 'Transação', txVal)
+        addTx(year, mm, dd, desc || 'Transação', txVal, undefined, true)
       }
 
     } else {
@@ -216,7 +227,7 @@ export function parseStatementTransactions(text: string): ParsedTransaction[] {
       const smallest = numVals.sort((a, b) => a.n - b.n)[0]
       if (!smallest) continue
       const desc = rest.replace(smallest.raw, '').trim()
-      addTx(year, mm, dd, desc || 'Transação', smallest.raw)
+      addTx(year, mm, dd, desc || 'Transação', smallest.raw, undefined, true)
     }
   }
 
