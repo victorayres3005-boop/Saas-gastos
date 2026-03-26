@@ -5,7 +5,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, ArrowLeftRight, PieChart, LogOut, Target,
   RefreshCw, Settings, Wallet, BarChart2, Bell, X, Sun, Moon, Monitor,
-  TrendingUp,
+  TrendingUp, MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/hooks/useProfile'
@@ -44,7 +44,13 @@ const mobileNavItems = [
   { href: '/transactions', label: 'Transações', icon: ArrowLeftRight },
   { href: '/analysis',     label: 'Análise',    icon: BarChart2 },
   { href: '/goals',        label: 'Metas',      icon: Target },
-  { href: '/settings',     label: 'Config.',    icon: Settings },
+]
+
+const mobileMoreItems = [
+  { href: '/accounts',  label: 'Contas',      icon: Wallet },
+  { href: '/budget',    label: 'Orçamento',   icon: PieChart,   hasBudgetAlert: true },
+  { href: '/recurring', label: 'Recorrentes', icon: RefreshCw },
+  { href: '/settings',  label: 'Config.',     icon: Settings },
 ]
 
 export function Sidebar() {
@@ -54,6 +60,7 @@ export function Sidebar() {
   const alerts = useBudgetAlerts()
   const { theme, setTheme } = useTheme()
   const [showAlerts, setShowAlerts] = useState(false)
+  const [showMore, setShowMore] = useState(false)
 
   const alertCount = alerts.length
   const dangerCount = alerts.filter(a => a.severity === 'danger').length
@@ -251,13 +258,60 @@ export function Sidebar() {
           )
         })}
         <button
-          onClick={handleSignOut}
-          className="flex-1 flex flex-col items-center justify-center py-3 gap-1 text-[10px] font-medium text-text-tertiary hover:text-negative transition-colors"
+          onClick={() => setShowMore(true)}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 text-[10px] font-medium transition-colors ${showMore ? 'text-accent' : 'text-text-tertiary'}`}
         >
-          <LogOut size={18} strokeWidth={1.5} />
-          Sair
+          <MoreHorizontal size={18} strokeWidth={showMore ? 2.2 : 1.5} />
+          Mais
         </button>
       </nav>
+
+      {/* More Drawer */}
+      {showMore && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            onClick={() => setShowMore(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 bg-bg-surface rounded-t-2xl z-50 md:hidden pb-safe">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <span className="text-sm font-semibold text-text-primary">Mais opções</span>
+              <button onClick={() => setShowMore(false)} className="text-text-tertiary hover:text-text-primary transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-3 py-3 space-y-1">
+              {mobileMoreItems.map(({ href, label, icon: Icon, hasBudgetAlert }) => {
+                const active = pathname === href || pathname.startsWith(href + '/')
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setShowMore(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${active ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:bg-bg-page hover:text-text-primary'}`}
+                  >
+                    <Icon size={18} strokeWidth={active ? 2.2 : 1.5} className={active ? 'text-accent' : ''} />
+                    <span className="flex-1">{label}</span>
+                    {hasBudgetAlert && alertCount > 0 && (
+                      <span className={`min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 ${dangerCount > 0 ? 'bg-negative' : 'bg-warning'}`}>
+                        {alertCount}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-negative-light hover:text-negative transition-colors"
+              >
+                <LogOut size={18} strokeWidth={1.5} />
+                Sair
+              </button>
+            </div>
+            <div className="h-6" />
+          </div>
+        </>
+      )}
     </>
   )
 }
